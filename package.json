@@ -1,0 +1,21 @@
+{
+  "name": "accordpay",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@accordpay/web",
+    "build": "npm run build --workspace=@accordpay/web",
+    "lint": "npm run lint --workspace=@accordpay/web",
+    "typecheck": "npm run typecheck --workspace=@accordpay/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "prettier": "^3.9.6"
+  }
+}
