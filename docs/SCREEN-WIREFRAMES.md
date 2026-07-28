@@ -161,7 +161,7 @@ Footer
 ### Interactive escrow-flow preview
 
 - **Objective:** Make the lifecycle understandable before wallet use.
-- **Content:** Created, Funded, Delivered, and Released, plus branching Refunded or future Disputed states.
+- **Content:** Atomically Created and Funded, followed by Delivered and Released, plus branching Refunded or Disputed states.
 - **Visual hierarchy:** Current selected step, explanation, parties, and state consequence.
 - **Recommended layout:** A non-financial educational step selector with an adjacent explanation. Any displayed amounts must be clearly labelled examples.
 - **Mobile behaviour:** Horizontal step control with accessible overflow or a vertical ordered sequence.
@@ -270,7 +270,7 @@ Footer
 - **AccordPay identity:** Top of the sidebar and linked to Dashboard. Use text until an approved logo exists.
 - **Active state:** Uses a label, indicator, and contrast—not colour alone.
 - **Wallet area:** Shows connection action or shortened connected address. Full address is available safely. Connection is not labelled as login.
-- **GIWA network indicator:** Shows the exact configured network and whether it is supported.
+- **GIWA network indicator:** Shows **GIWA Sepolia**, chain ID `91342`, and whether the connected wallet is on that network.
 - **Page-title area:** Contains one page heading, concise context, and at most one primary page action.
 - **Breadcrumb area:** Appears only on hierarchical screens such as Escrow Details.
 - **Notification area:** Holds relevant, dismissible notices and persistent wrong-network or system warnings.
@@ -387,11 +387,11 @@ Errors appear immediately after the associated field and are linked programmatic
 
 Field order:
 
-1. **Asset** — required selection from implemented and verified supported assets.
+1. **Asset** — read-only **Test ETH**, the only asset supported by the MVP.
 2. **Amount** — required positive value within supported decimal precision and contract limits.
-3. **Protocol fee** — read-only, exact implemented fee or “Calculated before confirmation” if genuinely unavailable.
-4. **Total deposit** — read-only amount plus fee, with the basis clearly stated.
-5. **GIWA network** — read-only exact network name with supported or wrong-network state.
+3. **Protocol fee** — read-only `0 ETH`.
+4. **Total deposit** — read-only and equal to the escrow amount; network gas is separate.
+5. **GIWA network** — read-only **GIWA Sepolia** with chain ID `91342` and supported or wrong-network state.
 
 Show the wallet balance only when retrieved successfully and label it by asset and network. Do not display a guessed fee, zero fee, or placeholder asset as real.
 
@@ -403,9 +403,9 @@ Seller             Full address
 Agreement          Title and complete description
 Deadline           Absolute date, time, and timezone
 Amount             Exact amount and asset
-Protocol fee       Exact fee and basis
-Total deposit      Exact total
-Network            Exact GIWA environment
+Protocol fee       0 ETH
+Total deposit      Exact escrow amount
+Network            GIWA Sepolia · Chain ID 91342
 
 Important escrow conditions
 - Creation and funding state
@@ -426,7 +426,7 @@ State sequence:
 - **Awaiting signature:** “Review the escrow creation request in your wallet.” Explain that no transaction has been submitted.
 - **Submitted:** Show the real transaction hash and exact network when available. Explain that submission is not confirmation.
 - **Confirmation progress:** Show the current known confirmation state without inventing percentage completion.
-- **Success:** Show confirmed agreement identifier, state, amount, asset, and next step. If creation and funding are separate, say clearly that the agreement is not funded.
+- **Success:** After one GIWA block and verification of the resulting contract state, show the formatted `ACP-000001`-style identifier, Funded state, exact Test ETH amount, and next step. Creation and funding occur atomically.
 - **Failure and recovery:** Preserve entered terms, state whether a transaction exists, explain the known failure, and offer a safe retry or agreement route.
 
 ### Navigation behaviour
@@ -473,7 +473,7 @@ Search by agreement identifier, safe title text, external reference, or wallet a
 
 ### Filters and sorting
 
-- Status: Created, Funded, Delivered, Released, Refunded, Cancelled, and future Disputed.
+- Status: Created/Funded, Delivered, Released, Refunded, Cancelled, and Disputed.
 - Role: All, Buyer, Seller.
 - Additional filters: action required, asset, created range, deadline range.
 - Default sort: action required first, then recently updated.
@@ -499,10 +499,10 @@ Each record receives one exact context action, such as **Fund agreement**, **Mar
 ### Core structure
 
 ```text
-Escrows / Agreement AP-…
+Escrows / Agreement ACP-…
 
 Agreement title                         [Exact status]
-AP-… · GIWA network
+ACP-… · GIWA Sepolia
 
 [Required next action and role-aware action panel]
 
@@ -515,7 +515,7 @@ Agreement description and acceptance terms
 
 Escrow lifecycle timeline
 Created — Funded — Delivered — Released
-               ↘ Refunded / Cancelled / future Disputed
+               ↘ Refunded / Cancelled / Disputed
 
 Contract and transaction details
 Contract address | Creation transaction | Explorer links
@@ -525,7 +525,7 @@ Transaction activity
 
 ### Identity and financial summary
 
-- Show the agreement title, canonical identifier, exact state, and exact GIWA network first.
+- Show the agreement title, `ACP-000001`-style display identifier, canonical numeric identifier, exact state, and **GIWA Sepolia** first.
 - Show amount and asset without conversion unless a real valuation source exists.
 - Show the absolute deadline with timezone and optional relative time.
 - Show full buyer and seller addresses with safe copy controls.
@@ -562,11 +562,11 @@ If no action is required, state what the agreement is waiting for and who acts n
 The buyer sees:
 
 - Their role identified explicitly.
-- Funding action when the agreement is created and eligible.
+- Confirmation that creation and Test ETH funding occurred atomically, or the exact unresolved transaction state.
 - Seller delivery status and submitted information.
 - **Release funds** only after the contract permits release.
 - Eligible refund or cancellation action with exact conditions.
-- Future dispute information only when a real resolution mechanism exists.
+- **Raise dispute** only when the MVP contract permits it, with the designated testnet resolver model disclosed.
 - Confirmation dialogs that restate amount, seller, network, fee, and resulting state.
 
 The buyer must never see release as a routine “Continue” action.
@@ -576,12 +576,12 @@ The buyer must never see release as a routine “Continue” action.
 The seller sees:
 
 - Their role identified explicitly.
-- A prominent distinction between created and confirmed funded states.
+- A prominent distinction between a submitted creation transaction and the confirmed atomically created-and-funded state.
 - **Mark delivered** only when the contract permits it.
 - Delivery-submission requirements and permanence.
 - Waiting-for-buyer-review status after delivery.
 - Settlement transaction after confirmed release.
-- Refund or future dispute consequences when relevant.
+- Refund or dispute consequences when relevant.
 
 The seller must never be encouraged to deliver before funding is confirmed.
 
@@ -605,7 +605,7 @@ Available only when contract rules permit it. State refund amount, asset, destin
 
 ### Dispute action
 
-Formal dispute handling is future functionality and excluded from the initial MVP. Until a real contract state and resolution system exist, show documented limitations rather than an enabled action. Never create a non-functional “Raise dispute” button.
+Buyer or seller may raise a dispute when the MVP contract permits it. The confirmation explains that the action freezes funds and that a designated resolver may resolve the testnet dispute. Show the resolver model and resulting Disputed state without calling the process decentralised arbitration. Full arbitration governance remains future scope.
 
 ### Transaction activity
 
@@ -631,18 +631,18 @@ Preserve the prior authoritative state. Explain whether the wallet rejected, sub
 
 ```text
 Activity
-Account: 0x…1234 · GIWA network · Last updated …
+Account: 0x…1234 · GIWA Sepolia · Last updated …
 
 [Event type ▾] [Role ▾] [Status ▾] [Date range] [Clear]
 
 Date
-[Event] [Escrow AP-…] [Buyer/Seller] [Amount]
+[Event] [Escrow ACP-…] [Buyer/Seller] [Amount]
 [Timestamp] [Transaction status] [Hash] [View on GIWA Explorer]
 ```
 
 Each record defines:
 
-- **Event type:** Created, Funded, Delivered, Released, Refunded, Cancelled, or future Disputed.
+- **Event type:** Created/Funded, Delivered, Released, Refunded, Cancelled, Disputed, or Dispute Resolved.
 - **Escrow identifier:** canonical identifier linked to details.
 - **Wallet role:** Buyer, Seller, or Viewer where meaningful.
 - **Amount:** exact amount and asset only when relevant to the event.
@@ -663,7 +663,7 @@ Connected wallet
 Connection is not an AccordPay account.
 
 Network information
-GIWA network · Chain identifier · Supported state
+GIWA Sepolia · Chain ID 91342 · Supported state
 
 Display
 Theme / density / time format, only when implemented
@@ -685,7 +685,7 @@ Do not imply username/password authentication, profiles, custody, or account rec
 | State                       | Message title                           | Supporting message                                                                                                                         | Primary action                 | Secondary action               | Must never imply                                          |
 | --------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | ------------------------------ | --------------------------------------------------------- |
 | Wallet disconnected         | Connect a wallet to continue            | Connect a supported wallet to view agreements for an address or perform an action.                                                         | Connect wallet                 | View documentation             | That connection creates an account or transfers funds     |
-| Wrong network               | Switch to the supported GIWA network    | This action requires the exact configured GIWA environment; the current network is unsupported.                                            | Switch network                 | Continue read-only             | That switching submits the escrow transaction             |
+| Wrong network               | Switch to GIWA Sepolia                  | This action requires GIWA Sepolia (chain ID `91342`); the current network is unsupported.                                                  | Switch network                 | Continue read-only             | That switching submits the escrow transaction             |
 | Wallet rejected transaction | Transaction not approved                | The wallet request was rejected. No new transaction was submitted by AccordPay.                                                            | Try again                      | Return to agreement            | That rejection is an on-chain failure or that funds moved |
 | Transaction pending         | Transaction submitted                   | The transaction is awaiting network confirmation on the named GIWA environment.                                                            | View transaction               | Return to agreement            | That submission equals confirmation                       |
 | Transaction confirmed       | Transaction confirmed                   | The named action is confirmed and the agreement is now in the exact displayed state.                                                       | View agreement                 | View on explorer               | That unrelated later steps are complete                   |
@@ -751,7 +751,7 @@ All widths must support 200% text resizing, keyboard navigation, and reduced mot
 
 - Use plain language and define unavoidable technical terms.
 - State the exact transaction status: awaiting wallet, submitted, confirmed, failed, replaced, or unavailable.
-- State the exact configured GIWA network name.
+- State the exact network name: **GIWA Sepolia**.
 - Show the exact asset and amount; never silently combine assets.
 - Make no false guarantee of security, settlement, refund, timing, or availability.
 - Do not claim funds are safe before contracts are implemented, tested, and independently assessed as appropriate.
@@ -825,26 +825,18 @@ This inventory identifies likely reusable responsibilities; it does not prescrib
 
 ## Open UX decisions
 
-1. Which exact GIWA environment and display name will the MVP support?
-2. Which wallet providers and connection standard will be supported?
-3. Does agreement creation also fund escrow, or are creation and funding separate transactions?
-4. Which asset or assets are supported in the first MVP?
-5. What is the implemented protocol-fee model, recipient, precision, and disclosure language?
-6. Who may cancel or refund, in which states, and under what deadline conditions?
-7. Is there a contract-enforced buyer review window after delivery?
-8. What delivery information is stored on-chain, referenced externally, or intentionally excluded?
-9. Are agreement descriptions public, hashed, encrypted, or stored outside the contract?
-10. What human-readable agreement identifier maps to the contract’s canonical identifier?
-11. Which indexed data source powers lists and activity, and how is stale data communicated?
-12. What transaction-confirmation threshold is required before each state is presented as confirmed?
-13. Which verified GIWA Explorer URL patterns are available?
-14. Will the MVP allow read-only public agreement details, and which fields are safe to expose?
-15. Should the desktop shell use a persistent sidebar or a horizontal application header after usability testing?
-16. Which display settings are valuable enough for the initial Settings screen?
-17. What support and recovery path exists when RPC and indexed contract data disagree?
-18. What happens contractually when a delivery deadline passes?
-19. Is formal dispute state omitted entirely from the MVP contract or reserved but disabled?
-20. What marketplace-intent format, trust boundary, and callback model may be explored after the standalone MVP?
+Network, wallet, transaction, asset, fee, refund, data, identifier, confirmation, navigation, identity, dispute, and disclosure questions are resolved in [`MVP-DECISIONS.md`](./MVP-DECISIONS.md). The following implementation-level decisions genuinely remain open:
+
+1. Is there a contract-enforced buyer review window after delivery, or may the buyer release at any time while the escrow remains delivered?
+2. Which permitted delivery reference form will the MVP use: metadata hash, content-addressed URI, evidence reference, or a defined combination?
+3. Which off-chain storage and indexing system powers agreement titles, descriptions, lists, search, delivery notes, and activity, and how is stale data communicated?
+4. What verified GIWA Explorer path patterns should be used for transaction, address, block, and contract links beneath the approved explorer base URL?
+5. Will the MVP provide a public read-only Escrow Details route, and which off-chain fields are safe to expose there?
+6. Which light-mode display settings, if any, are valuable enough for the initial Settings screen?
+7. What support and recovery path applies when the GIWA RPC, transaction receipt, contract read, and off-chain index disagree?
+8. What metadata schema, validation, versioning, and content-integrity rules govern the off-chain agreement reference?
+9. What testnet resolver address and operational procedure will be designated for disputes, and how will resolver decisions be documented?
+10. What marketplace-intent format, trust boundary, and callback model may be explored after the standalone MVP?
 
 ## Acceptance criteria for beginning UI implementation
 
