@@ -33,6 +33,47 @@ const concepts = [
 ] as const;
 
 const sizes = [16, 24, 32, 48, 128, 256] as const;
+const productionSizes = [32, 64, 128] as const;
+const faviconSizes = [16, 24, 32, 48] as const;
+
+const finalAssets = [
+  {
+    name: "Official two-colour icon",
+    file: "logo-icon.svg",
+    source: "/brand/logo-icon.svg",
+    surface: "light",
+  },
+  {
+    name: "Official inverse icon",
+    file: "logo-icon-dark.svg",
+    source: "/brand/logo-icon-dark.svg",
+    surface: "dark",
+  },
+  {
+    name: "Deep-pine single-colour icon",
+    file: "logo-icon-light.svg",
+    source: "/brand/logo-icon-light.svg",
+    surface: "light",
+  },
+  {
+    name: "Print monochrome icon",
+    file: "logo-monochrome.svg",
+    source: "/brand/logo-monochrome.svg",
+    surface: "light",
+  },
+  {
+    name: "White monochrome icon",
+    file: "logo-monochrome-light.svg",
+    source: "/brand/logo-monochrome-light.svg",
+    surface: "dark",
+  },
+  {
+    name: "Favicon",
+    file: "favicon.svg",
+    source: "/brand/favicon.svg",
+    surface: "light",
+  },
+] as const;
 
 const refinements = [
   {
@@ -121,81 +162,173 @@ export default function LogoReviewPage() {
       <div className="mx-auto max-w-[var(--container-wide)]">
         <header className="max-w-[var(--container-reading)]">
           <p className="m-0 text-[length:var(--font-size-sm)] font-semibold tracking-[var(--letter-spacing-wide)] text-[var(--color-action)] uppercase">
-            Internal design review — not a production asset
+            Brand asset review
           </p>
           <h1 className="mt-[var(--space-3)] text-[length:var(--font-size-3xl)] leading-[var(--line-height-3xl)] font-semibold tracking-[var(--letter-spacing-tight)]">
-            Accord Mark concept comparison
+            AccordPay logo review
           </h1>
           <p className="mt-[var(--space-4)] max-w-[var(--measure-copy)] text-[length:var(--font-size-base)] leading-[var(--line-height-base)] text-[var(--color-text-subtle)]">
-            Review the independent icon concepts across colour, monochrome,
-            surface, and size conditions. These explorations are not approved
-            AccordPay logos.
+            Review the approved A3 production variants and the preserved design
+            history across colour, surface, and size conditions.
           </p>
         </header>
 
-        <div className="mt-[var(--space-12)] space-y-[var(--space-12)]">
-          {concepts.map((concept) => (
-            <section
-              key={concept.id}
-              aria-labelledby={`concept-${concept.id}`}
-              className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)]"
+        <section
+          aria-labelledby="approved-production-title"
+          className="mt-[var(--space-12)]"
+        >
+          <div className="rounded-[var(--radius-xl)] border border-[var(--color-pine-100)] bg-[var(--color-pine-50)] p-[var(--space-6)] md:p-[var(--space-8)]">
+            <p className="m-0 text-[length:var(--font-size-sm)] font-semibold tracking-[var(--letter-spacing-wide)] text-[var(--color-pine-800)] uppercase">
+              A3 — Controlled Release · Approved July 28, 2026
+            </p>
+            <h2
+              id="approved-production-title"
+              className="mt-[var(--space-3)] text-[length:var(--font-size-2xl)] leading-[var(--line-height-2xl)] font-semibold tracking-[var(--letter-spacing-tight)]"
             >
-              <div className="border-b border-[var(--color-border)] px-[var(--space-6)] py-[var(--space-5)]">
-                <h2
-                  id={`concept-${concept.id}`}
-                  className="m-0 text-[length:var(--font-size-xl)] leading-[var(--line-height-xl)] font-semibold"
-                >
-                  {concept.name}
-                </h2>
-              </div>
+              Approved production mark
+            </h2>
+            <p className="mt-[var(--space-4)] max-w-[var(--measure-copy)] text-[length:var(--font-size-base)] leading-[var(--line-height-base)] text-[var(--color-text-subtle)]">
+              The two paths represent independent parties around protected
+              escrow space. Their lower separation expresses controlled release
+              into stable settlement. Use each asset only on its documented
+              surface.
+            </p>
+          </div>
 
-              {[
-                { name: "Colour", source: concept.color },
-                { name: "Monochrome", source: concept.monochrome },
-              ].map((variant) => (
-                <div
-                  key={variant.name}
-                  className="border-b border-[var(--color-border)] p-[var(--space-4)] last:border-b-0 md:p-[var(--space-6)]"
+          <div className="mt-[var(--space-6)] grid gap-[var(--grid-gap-mobile)] md:grid-cols-2 xl:grid-cols-3 xl:gap-[var(--grid-gap-desktop)]">
+            {finalAssets.map((asset) => {
+              const assetSizes =
+                asset.file === "favicon.svg" ? faviconSizes : productionSizes;
+
+              return (
+                <article
+                  key={asset.file}
+                  className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] p-[var(--space-5)] md:p-[var(--space-6)] ${
+                    asset.surface === "dark"
+                      ? "bg-[var(--color-pine-800)] text-[var(--color-white)]"
+                      : "bg-[var(--color-white)] text-[var(--color-ink-950)]"
+                  }`}
                 >
-                  <h3 className="m-0 text-[length:var(--font-size-base)] leading-[var(--line-height-base)] font-semibold">
-                    {variant.name}
+                  <p className="m-0 text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] font-semibold tracking-[var(--letter-spacing-wide)] uppercase">
+                    {asset.surface === "dark"
+                      ? "Dark-surface asset"
+                      : "Light-surface asset"}
+                  </p>
+                  <h3 className="mt-[var(--space-2)] text-[length:var(--font-size-lg)] leading-[var(--line-height-lg)] font-semibold">
+                    {asset.name}
                   </h3>
-                  <div className="mt-[var(--space-4)] grid gap-[var(--grid-gap-mobile)] xl:grid-cols-2 xl:gap-[var(--grid-gap-desktop)]">
-                    {surfaces.map((surface) => (
-                      <div
-                        key={surface.name}
-                        className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] p-[var(--space-4)] md:p-[var(--space-6)] ${surface.className}`}
+                  <code className="mt-[var(--space-1)] block text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] opacity-80">
+                    {asset.file}
+                  </code>
+                  <div className="mt-[var(--space-6)] flex min-h-32 flex-wrap items-end gap-[var(--space-5)]">
+                    {assetSizes.map((size) => (
+                      <figure
+                        key={size}
+                        className="m-0 grid min-w-[3rem] justify-items-center gap-[var(--space-2)]"
                       >
-                        <p className="m-0 text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] font-semibold tracking-[var(--letter-spacing-wide)] uppercase">
-                          {surface.name} surface
-                        </p>
-                        <div className="mt-[var(--space-5)] flex flex-wrap items-end gap-[var(--space-5)]">
-                          {sizes.map((size) => (
-                            <figure
-                              key={size}
-                              className="m-0 grid min-w-[3rem] justify-items-center gap-[var(--space-2)]"
-                            >
-                              <Image
-                                src={variant.source}
-                                alt={`${concept.name}, ${variant.name.toLowerCase()}, ${size} pixels on ${surface.name.toLowerCase()}`}
-                                width={size}
-                                height={size}
-                                unoptimized
-                              />
-                              <figcaption className="font-mono text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] opacity-80">
-                                {size}px
-                              </figcaption>
-                            </figure>
-                          ))}
-                        </div>
-                      </div>
+                        <Image
+                          src={asset.source}
+                          alt={`${asset.name}, approved AccordPay A3 mark at ${size} pixels`}
+                          width={size}
+                          height={size}
+                          unoptimized
+                        />
+                        <figcaption className="font-mono text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] opacity-80">
+                          {size}px
+                        </figcaption>
+                      </figure>
                     ))}
                   </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="exploration-history-title"
+          className="mt-[var(--space-20)]"
+        >
+          <div className="max-w-[var(--container-reading)]">
+            <p className="m-0 text-[length:var(--font-size-sm)] font-semibold tracking-[var(--letter-spacing-wide)] text-[var(--color-action)] uppercase">
+              Internal design review — not a production asset
+            </p>
+            <h2
+              id="exploration-history-title"
+              className="mt-[var(--space-3)] text-[length:var(--font-size-3xl)] leading-[var(--line-height-3xl)] font-semibold tracking-[var(--letter-spacing-tight)]"
+            >
+              Exploration history
+            </h2>
+            <p className="mt-[var(--space-4)] text-[length:var(--font-size-base)] leading-[var(--line-height-base)] text-[var(--color-text-subtle)]">
+              The original concepts and refinement sources below are preserved
+              for provenance. They are not approved production alternatives.
+            </p>
+          </div>
+
+          <div className="mt-[var(--space-10)] space-y-[var(--space-12)]">
+            {concepts.map((concept) => (
+              <section
+                key={concept.id}
+                aria-labelledby={`concept-${concept.id}`}
+                className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)]"
+              >
+                <div className="border-b border-[var(--color-border)] px-[var(--space-6)] py-[var(--space-5)]">
+                  <h2
+                    id={`concept-${concept.id}`}
+                    className="m-0 text-[length:var(--font-size-xl)] leading-[var(--line-height-xl)] font-semibold"
+                  >
+                    {concept.name}
+                  </h2>
                 </div>
-              ))}
-            </section>
-          ))}
-        </div>
+
+                {[
+                  { name: "Colour", source: concept.color },
+                  { name: "Monochrome", source: concept.monochrome },
+                ].map((variant) => (
+                  <div
+                    key={variant.name}
+                    className="border-b border-[var(--color-border)] p-[var(--space-4)] last:border-b-0 md:p-[var(--space-6)]"
+                  >
+                    <h3 className="m-0 text-[length:var(--font-size-base)] leading-[var(--line-height-base)] font-semibold">
+                      {variant.name}
+                    </h3>
+                    <div className="mt-[var(--space-4)] grid gap-[var(--grid-gap-mobile)] xl:grid-cols-2 xl:gap-[var(--grid-gap-desktop)]">
+                      {surfaces.map((surface) => (
+                        <div
+                          key={surface.name}
+                          className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] p-[var(--space-4)] md:p-[var(--space-6)] ${surface.className}`}
+                        >
+                          <p className="m-0 text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] font-semibold tracking-[var(--letter-spacing-wide)] uppercase">
+                            {surface.name} surface
+                          </p>
+                          <div className="mt-[var(--space-5)] flex flex-wrap items-end gap-[var(--space-5)]">
+                            {sizes.map((size) => (
+                              <figure
+                                key={size}
+                                className="m-0 grid min-w-[3rem] justify-items-center gap-[var(--space-2)]"
+                              >
+                                <Image
+                                  src={variant.source}
+                                  alt={`${concept.name}, ${variant.name.toLowerCase()}, ${size} pixels on ${surface.name.toLowerCase()}`}
+                                  width={size}
+                                  height={size}
+                                  unoptimized
+                                />
+                                <figcaption className="font-mono text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] opacity-80">
+                                  {size}px
+                                </figcaption>
+                              </figure>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ))}
+          </div>
+        </section>
 
         <section
           aria-labelledby="refinement-round-title"

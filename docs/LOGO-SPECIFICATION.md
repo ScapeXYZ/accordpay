@@ -1,5 +1,15 @@
 # AccordPay Logo Specification
 
+## Approval record
+
+**A3 — Controlled Release** was approved by the AccordPay product lead on **July 28, 2026** as the official AccordPay logo mark.
+
+The approved geometry uses two independent, balanced paths. Together they create a protected central holding space and a controlled lower release path, resolving into a stable settlement silhouette. The mark communicates agreement and escrow without using a padlock, shield, coin, handshake, trading arrow, or literal security symbol.
+
+Approved production assets live directly in `apps/web/public/brand/`. Files under `concepts/` and `refinements/` are preserved design history and are not production identity assets.
+
+No vector wordmark has been approved or created. The product name **AccordPay** will later appear as accessible live text beside the mark in website and application interfaces.
+
 ## 1. Brand story
 
 AccordPay exists because commerce between independent parties often begins with uncertainty. Buyers need confidence that funds will not be released before agreed conditions are met. Sellers need confidence that committed payment exists before they deliver. Traditional escrow can add friction, delay, and opacity, while direct digital payments can force one party to accept disproportionate risk.
@@ -71,18 +81,18 @@ Also avoid gavels, keys, vaults, checkmarks as the primary concept, literal lett
 
 ## 6. Logo variants required
 
-The completed identity system must include:
+The approved icon system includes:
 
-- **Primary logo:** preferred full-colour expression.
-- **Icon only:** standalone mark for compact product contexts.
-- **Horizontal lockup:** mark and wordmark arranged for navigation and wide placements.
-- **Vertical lockup:** mark above the wordmark for centred and constrained placements.
-- **Monochrome black:** single-colour artwork for light backgrounds and production constraints.
-- **Monochrome white:** reversed artwork for dark backgrounds.
-- **App icon:** optically adjusted mark within platform-safe boundaries.
-- **Favicon:** simplified mark tested at very small rasterized sizes.
+- **Primary icon:** `logo-icon.svg` for white and light surfaces.
+- **Dark-surface icon:** `logo-icon-dark.svg` for Pine 800 and approved dark surfaces.
+- **Single-colour pine icon:** `logo-icon-light.svg` for light surfaces.
+- **Monochrome icon:** `logo-monochrome.svg` for printing and neutral documents.
+- **Monochrome inverse:** `logo-monochrome-light.svg` for dark backgrounds.
+- **Favicon:** `favicon.svg` for browser metadata and compact use.
 
 Every variant must originate from the same geometry. Variants must not introduce alternate symbols, decorative containers, or unapproved colours.
+
+Horizontal and vertical wordmark lockups remain future deliverables. Do not assemble an unofficial lockup from the icon and an outlined or embedded font.
 
 ## 7. Minimum sizing
 
@@ -121,6 +131,7 @@ Do not:
 - Apply gradients, glows, bevels, outlines, textures, or drop shadows.
 - Place the logo on a low-contrast or visually busy background.
 - Recolour individual paths to imply unapproved status or network meaning.
+- Recolour the approved assets arbitrarily or use a light-surface asset on a dark surface.
 - Put the logo inside a coin, shield, badge, or arbitrary container.
 - Animate separate pieces in a way that suggests instability or conflict.
 - Add “GIWA,” “Chain,” “Escrow,” or another descriptor to the lockup.

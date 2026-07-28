@@ -1,8 +1,27 @@
 # AccordPay Logo Concept Review
 
+## Final approval
+
+The AccordPay product lead approved **Refinement A3 — Controlled Release** as the official AccordPay mark on **July 28, 2026**.
+
+The two independent paths represent buyer and seller with equal visual weight. Their inner edges form a protected central holding space. The balanced lower separation represents value leaving escrow through a controlled release path. The broad, compact base communicates stable settlement and supports clear rendering at favicon and app-icon sizes.
+
+The final production files are:
+
+- `logo-icon.svg` — two-colour mark for white and light surfaces.
+- `logo-icon-dark.svg` — white inverse mark for deep-pine and dark surfaces.
+- `logo-icon-light.svg` — Pine 800 single-colour mark for light surfaces.
+- `logo-monochrome.svg` — `currentColor` mark for print and neutral documents.
+- `logo-monochrome-light.svg` — white monochrome mark for dark backgrounds.
+- `favicon.svg` — Pine 800 browser icon.
+
+These files live directly in `apps/web/public/brand/`. They must not be recoloured arbitrarily. Use the approved asset for the intended surface.
+
+The original concepts and A1–A3 refinements remain below as design history. They are not interchangeable production alternatives. No vector wordmark has been created; AccordPay will later use accessible live text beside the approved icon.
+
 ## Review status
 
-These hand-authored vector concepts explore the approved **Accord Mark** direction. They are internal design-review assets, not production logos. No concept may be described as final or approved until the product lead completes review and subsequent originality, trademark, optical, accessibility, and production checks.
+The following hand-authored vectors document exploration of the **Accord Mark** direction. They are internal design-history assets, not production logos. Only A3’s promoted files listed in the Final approval section are approved for production identity use.
 
 All concepts use two independent paths, protected negative space, and an emergent rather than literal letter A. They avoid padlocks, shields, coins, handshakes, chain imagery, trading arrows, infinity symbols, gradients, shadows, and decorative effects.
 
@@ -211,7 +230,7 @@ It offers the best balance of the approved brief: two equal parties, a legible p
 
 The next round should explore optical adjustments to the apex, protected-space width, lower insets, and overall stance. It must also test whether the geometry is sufficiently distinct from existing A monograms.
 
-This recommendation is advisory. **Final concept approval belongs to the AccordPay product lead.** Approval should follow side-by-side review at all specified sizes, reversed-colour exploration, professional similarity and trademark screening, and documented sign-off. None of the current SVGs is a production asset.
+This recommendation records the conclusion of the original concept round. It preceded refinement and is retained as design history. The product lead subsequently approved Refinement A3, as recorded in the Final approval section.
 
 ## Concept A refinement round
 
@@ -219,7 +238,7 @@ The product lead selected Concept A as the only direction for refinement. The th
 
 The source colour versions use Pine 800 (`#0F493A`) and Pine 600 (`#18745C`) on white. On deep-pine surfaces, the review page uses the SVG silhouette as a white inverse mask. It never places black or dark-pine artwork directly on the deep-pine background. Monochrome source files use `currentColor` and render as black on white or white through the inverse treatment.
 
-No refinement is a production asset, and this review round does not declare a winner.
+The refinement files remain historical source assets rather than production filenames. The product lead subsequently selected A3 and approved its promoted production variants.
 
 ### Refinement A1 — Protected Chamber
 
@@ -299,4 +318,4 @@ The product lead should compare A1, A2, and A3 at every specified size and on bo
 6. Whether the silhouette is sufficiently proprietary for formal similarity and trademark review.
 7. Whether the icon can later support a horizontal wordmark without geometric compromise.
 
-Final selection remains a product-lead decision after documented review. No refinement should be promoted into `public/brand/` production filenames until that approval and the required originality, trademark, optical, and accessibility checks are complete.
+The product lead completed selection and approved A3 on July 28, 2026. Its production variants now live directly in `public/brand/`; A1, A2, and the original A3 refinement file remain in `refinements/` as design history.

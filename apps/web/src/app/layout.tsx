@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "AccordPay",
   description:
     "Verified escrow and programmable commerce infrastructure built on GIWA Chain.",
+  icons: {
+    icon: "/brand/favicon.svg",
+  },
 };
 
 type RootLayoutProps = Readonly<{
