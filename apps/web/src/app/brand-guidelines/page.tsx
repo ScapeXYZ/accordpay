@@ -269,8 +269,8 @@ export default function BrandGuidelinesPage() {
               <Image
                 src="/brand/logo-icon.svg"
                 alt="AccordPay A3 — Controlled Release logo"
-                width={120}
-                height={120}
+                width={136}
+                height={136}
                 priority
                 unoptimized
               />

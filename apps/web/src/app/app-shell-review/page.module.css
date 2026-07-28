@@ -1,0 +1,79 @@
+.page {
+  min-height: 100svh;
+  padding: var(--space-16) 0 var(--space-24);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+.intro p {
+  margin: 0;
+  color: var(--color-pine-700);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+.intro h1 {
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-size-4xl);
+  line-height: var(--line-height-4xl);
+  letter-spacing: var(--letter-spacing-tight);
+}
+.review h2 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-xl);
+}
+.sidebarFrame {
+  position: relative;
+  height: 34rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.sidebarFrame > aside {
+  position: absolute;
+}
+.collapsedFrame {
+  max-width: 8rem;
+}
+.headerFrame {
+  position: relative;
+  min-height: 16rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.headerFrame > header {
+  position: relative;
+}
+.mobileFrame {
+  max-width: 24rem;
+  min-height: 28rem;
+  margin-inline: auto;
+}
+.watermarkPanel {
+  min-height: 16rem;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.watermarkPanel > div > div {
+  max-width: 16rem;
+}
+.watermarkPanel p,
+.note {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+}
+@media (max-width: 48rem) {
+  .page {
+    padding-top: var(--space-10);
+  }
+  .intro h1 {
+    font-size: var(--font-size-3xl);
+    line-height: var(--line-height-3xl);
+  }
+}
