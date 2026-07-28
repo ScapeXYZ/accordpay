@@ -12,7 +12,7 @@ This is testnet development software. Test ETH has no monetary value. The contra
 - The seller trusts the buyer to release after accepted delivery.
 - Either party may freeze an eligible agreement by raising a dispute.
 - The designated resolver is trusted to choose the testnet payout split for disputed agreements.
-- The owner is trusted to maintain the resolver and pause or resume creation and financial settlement. Ownership uses a two-step transfer.
+- The owner is trusted to maintain the resolver and pause or resume new creation. Pausing cannot block existing escrow exits. Ownership uses a two-step transfer, and renunciation is disabled.
 - OpenZeppelin primitives reduce implementation risk but do not make this AccordPay contract audited.
 - Off-chain metadata availability and integrity depend on the selected content-addressed storage system and client-side validation.
 
@@ -41,19 +41,21 @@ stateDiagram-v2
 
 ## Roles and permissions
 
-| Role          | Permissions                                                                                                 |
-| ------------- | ----------------------------------------------------------------------------------------------------------- |
-| Buyer         | Create and fund; release a delivered escrow; reclaim a still-funded escrow after deadline; raise a dispute  |
-| Seller        | Mark delivery; approve a full refund while Funded or Delivered; raise a dispute                             |
-| Resolver      | Resolve a Disputed escrow using a 0–10,000 basis-point buyer share                                          |
-| Owner         | Update resolver; pause; unpause; initiate/cancel ownership transfer through inherited OpenZeppelin controls |
-| Pending owner | Accept ownership                                                                                            |
+| Role          | Permissions                                                                                                    |
+| ------------- | -------------------------------------------------------------------------------------------------------------- |
+| Buyer         | Create and fund; release a delivered escrow; reclaim a still-funded escrow after deadline; raise a dispute     |
+| Seller        | Mark delivery; approve a full refund while Funded or Delivered; raise a dispute                                |
+| Resolver      | Resolve a Disputed escrow using a 0–10,000 basis-point buyer share                                             |
+| Owner         | Update resolver; pause/resume creation; initiate/cancel two-step ownership transfer; cannot renounce ownership |
+| Pending owner | Accept ownership                                                                                               |
 
 ## Storage model
 
-Each escrow stores its numeric ID, buyer, seller, exact deposit, deadline, status, metadata URI, delivery-evidence URI, and creation/delivery/completion timestamps. `metadataURI` was selected over a bare hash because a content-addressed URI carries both the addressing scheme and immutable content reference while remaining indexer-friendly.
+Each escrow stores its numeric ID, buyer, seller, exact deposit, deadline, status, metadata URI, delivery-evidence URI, and creation/delivery/completion timestamps. `metadataURI` was selected over a bare hash because a content-addressed URI carries both the addressing scheme and immutable content reference while remaining indexer-friendly. Agreement and delivery references are limited to 2,048 bytes.
 
 Only references belong on-chain. Full descriptions, confidential terms, delivery notes, and evidence files remain off-chain. Clients should use content-addressed URIs and verify retrieved content. There is no function returning all escrows; indexers reconstruct lists from events.
+
+`totalEscrowLiability` increases with each deposit and decreases exactly once before a terminal payout. `totalLiability()` exposes the aggregate for monitoring. Forced ETH changes the raw balance but not liability.
 
 ## Refunds and deadlines
 
@@ -68,7 +70,7 @@ Buyer or seller may move a `Funded` or `Delivered` escrow to `Disputed`. Funds r
 
 ## Pause behaviour
 
-Pausing blocks new escrow creation and all functions that transfer funds: release, approved refund, deadline reclaim, and dispute resolution. Marking delivery and raising a dispute remain available because they do not move funds; raising a dispute can still freeze an at-risk agreement. Unpausing restores settlement.
+Pausing blocks only new escrow creation. Delivery, release, approved refund, deadline reclaim, dispute raising, and dispute resolution remain available. This prevents a compromised or unavailable owner from freezing already locked user funds. Unpausing restores creation.
 
 ## Events
 
@@ -89,8 +91,9 @@ OpenZeppelin ownership and pause events are emitted in addition to AccordPay’s
 - Custom errors and strict role/state validation
 - Checks-effects-interactions before every payout
 - Terminal statuses prevent double release or refund
-- Exact native deposit accounting and zero protocol fee
-- Rejected zero addresses, self-dealing seller, zero value, expired deadlines, and empty metadata references
+- Exact native deposit and aggregate liability accounting with zero protocol fee
+- Rejected zero addresses, self-dealing seller, zero value, expired deadlines, and empty or oversized metadata references
+- Disabled ownership renunciation
 - Rejected `receive` and `fallback`, so ordinary accidental ETH transfers fail
 - No `tx.origin`, `delegatecall`, `selfdestruct`, proxy, upgrade hook, hidden fee, or unbounded escrow loop
 - No administrative movement of escrowed funds
@@ -118,7 +121,7 @@ The MVP has no proxy or upgrade authority. This reduces administrative power, st
 - No on-chain list pagination; event indexing is required.
 - No metadata storage, privacy, availability, or moderation service is included.
 - Deadlines use block timestamps and normal validator timestamp tolerances apply.
-- Pause authority can temporarily delay financial actions.
+- Creation pause does not delay existing financial actions.
 - No production key management, multisig ownership, monitoring, formal verification, audit, or deployment has been completed.
 
 ## Environment and network

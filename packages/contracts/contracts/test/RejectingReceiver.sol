@@ -9,6 +9,8 @@ interface IAccordPayEscrowForRejector {
     ) external payable returns (uint256);
 
     function markDelivered(uint256 escrowId, string calldata deliveryURI) external;
+
+    function raiseDispute(uint256 escrowId) external;
 }
 
 /// @dev Test-only party that rejects every native-asset payout.
@@ -29,6 +31,10 @@ contract RejectingReceiver {
 
     function markDelivered(uint256 escrowId, string calldata deliveryURI) external {
         escrow.markDelivered(escrowId, deliveryURI);
+    }
+
+    function raiseDispute(uint256 escrowId) external {
+        escrow.raiseDispute(escrowId);
     }
 
     receive() external payable {

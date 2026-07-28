@@ -7,9 +7,13 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title AccordPayEscrow
+/// @author AccordPay
 /// @notice Native-asset, single-payment escrow for the AccordPay GIWA Sepolia MVP.
 /// @dev Creation and funding are atomic. Full agreement text and evidence files remain off-chain.
 contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
+    /// @notice Maximum byte length accepted for agreement and delivery URI references.
+    uint256 public constant MAX_METADATA_URI_LENGTH = 2_048;
+
     enum EscrowStatus {
         Funded,
         Delivered,
@@ -42,6 +46,7 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     error InvalidAmount();
     error InvalidDeadline();
     error EmptyMetadata();
+    error MetadataTooLong(uint256 suppliedLength, uint256 maximumLength);
     error EscrowNotFound(uint256 escrowId);
     error Unauthorized(uint256 escrowId, address caller);
     error InvalidStatus(uint256 escrowId, EscrowStatus current);
@@ -49,7 +54,15 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     error InvalidBuyerShare(uint16 buyerShareBps);
     error TransferFailed(address recipient, uint256 amount);
     error UnexpectedEther();
+    error OwnershipRenunciationDisabled();
 
+    /// @notice Emitted when an escrow is atomically created and funded.
+    /// @param escrowId Numeric escrow identifier.
+    /// @param buyer Funding buyer.
+    /// @param seller Designated seller.
+    /// @param amount Exact native-asset deposit.
+    /// @param deadline Reclaim deadline.
+    /// @param metadataURI Off-chain agreement reference.
     event EscrowCreated(
         uint256 indexed escrowId,
         address indexed buyer,
@@ -58,6 +71,12 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         uint64 deadline,
         string metadataURI
     );
+    /// @notice Emitted when the seller marks delivery.
+    /// @param escrowId Numeric escrow identifier.
+    /// @param buyer Escrow buyer.
+    /// @param seller Escrow seller.
+    /// @param deliveredAt Delivery timestamp.
+    /// @param deliveryURI Off-chain evidence reference.
     event DeliveryMarked(
         uint256 indexed escrowId,
         address indexed buyer,
@@ -65,12 +84,23 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         uint64 deliveredAt,
         string deliveryURI
     );
+    /// @notice Emitted when a buyer releases the deposit to the seller.
+    /// @param escrowId Numeric escrow identifier.
+    /// @param buyer Escrow buyer.
+    /// @param seller Escrow seller.
+    /// @param amount Seller payout.
     event FundsReleased(
         uint256 indexed escrowId,
         address indexed buyer,
         address indexed seller,
         uint256 amount
     );
+    /// @notice Emitted when a deposit is returned to the buyer.
+    /// @param escrowId Numeric escrow identifier.
+    /// @param buyer Escrow buyer.
+    /// @param seller Escrow seller.
+    /// @param amount Buyer refund.
+    /// @param reason Refund authorization path.
     event EscrowRefunded(
         uint256 indexed escrowId,
         address indexed buyer,
@@ -78,12 +108,23 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 amount,
         RefundReason reason
     );
+    /// @notice Emitted when either party freezes an escrow in dispute.
+    /// @param escrowId Numeric escrow identifier.
+    /// @param buyer Escrow buyer.
+    /// @param seller Escrow seller.
+    /// @param raisedBy Party that raised the dispute.
     event DisputeRaised(
         uint256 indexed escrowId,
         address indexed buyer,
         address indexed seller,
         address raisedBy
     );
+    /// @notice Emitted when the resolver distributes a disputed deposit.
+    /// @param escrowId Numeric escrow identifier.
+    /// @param buyer Escrow buyer.
+    /// @param seller Escrow seller.
+    /// @param buyerPayout Amount paid to the buyer.
+    /// @param sellerPayout Amount paid to the seller.
     event DisputeResolved(
         uint256 indexed escrowId,
         address indexed buyer,
@@ -91,18 +132,27 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 buyerPayout,
         uint256 sellerPayout
     );
+    /// @notice Emitted when the owner changes the resolver.
+    /// @param previousResolver Prior resolver address.
+    /// @param newResolver New resolver address.
     event ResolverUpdated(address indexed previousResolver, address indexed newResolver);
+    /// @notice Emitted when new escrow creation is paused.
+    /// @param account Owner that paused creation.
     event ContractPaused(address indexed account);
+    /// @notice Emitted when new escrow creation is resumed.
+    /// @param account Owner that resumed creation.
     event ContractUnpaused(address indexed account);
 
     mapping(uint256 escrowId => Escrow escrow) private _escrows;
     uint256 private _escrowCount;
+    uint256 private totalEscrowLiability;
     address private _resolver;
 
+    /// @notice Configures the initial owner and designated resolver.
     /// @param initialOwner Initial two-step owner.
     /// @param initialResolver Designated testnet dispute resolver.
     constructor(address initialOwner, address initialResolver) Ownable(initialOwner) {
-        if (initialOwner == address(0) || initialResolver == address(0)) revert ZeroAddress();
+        if (initialResolver == address(0)) revert ZeroAddress();
         _resolver = initialResolver;
         emit ResolverUpdated(address(0), initialResolver);
     }
@@ -121,9 +171,10 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         if (seller == address(0)) revert ZeroAddress();
         if (seller == msg.sender) revert InvalidSeller();
         if (deadline <= block.timestamp) revert InvalidDeadline();
-        if (bytes(metadataURI).length == 0) revert EmptyMetadata();
+        _validateMetadataURI(metadataURI);
 
         escrowId = ++_escrowCount;
+        totalEscrowLiability += msg.value;
         _escrows[escrowId] = Escrow({
             id: escrowId,
             buyer: msg.sender,
@@ -150,7 +201,7 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         if (escrow.status != EscrowStatus.Funded) {
             revert InvalidStatus(escrowId, escrow.status);
         }
-        if (bytes(deliveryURI).length == 0) revert EmptyMetadata();
+        _validateMetadataURI(deliveryURI);
 
         escrow.status = EscrowStatus.Delivered;
         escrow.deliveryURI = deliveryURI;
@@ -167,7 +218,7 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
 
     /// @notice Releases all escrowed funds to the seller after delivery.
     /// @param escrowId Delivered escrow identifier.
-    function releaseFunds(uint256 escrowId) external nonReentrant whenNotPaused {
+    function releaseFunds(uint256 escrowId) external nonReentrant {
         Escrow storage escrow = _requireEscrow(escrowId);
         if (msg.sender != escrow.buyer) revert Unauthorized(escrowId, msg.sender);
         if (escrow.status != EscrowStatus.Delivered) {
@@ -177,6 +228,7 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 amount = escrow.amount;
         escrow.status = EscrowStatus.Completed;
         escrow.completedAt = uint64(block.timestamp);
+        totalEscrowLiability -= amount;
 
         _sendValue(escrow.seller, amount);
         emit FundsReleased(escrowId, escrow.buyer, escrow.seller, amount);
@@ -185,7 +237,7 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     /// @notice Allows the seller to return all funds to the buyer before terminal settlement.
     /// @dev Seller approval is permitted in Funded or Delivered because it is a consensual unwind.
     /// @param escrowId Funded or Delivered escrow identifier.
-    function approveRefund(uint256 escrowId) external nonReentrant whenNotPaused {
+    function approveRefund(uint256 escrowId) external nonReentrant {
         Escrow storage escrow = _requireEscrow(escrowId);
         if (msg.sender != escrow.seller) revert Unauthorized(escrowId, msg.sender);
         if (
@@ -200,7 +252,7 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
 
     /// @notice Allows the buyer to reclaim after deadline only if delivery was never marked.
     /// @param escrowId Funded escrow identifier.
-    function reclaimAfterDeadline(uint256 escrowId) external nonReentrant whenNotPaused {
+    function reclaimAfterDeadline(uint256 escrowId) external nonReentrant {
         Escrow storage escrow = _requireEscrow(escrowId);
         if (msg.sender != escrow.buyer) revert Unauthorized(escrowId, msg.sender);
         if (escrow.status != EscrowStatus.Funded) {
@@ -237,7 +289,7 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     function resolveDispute(
         uint256 escrowId,
         uint16 buyerShareBps
-    ) external nonReentrant whenNotPaused {
+    ) external nonReentrant {
         Escrow storage escrow = _requireEscrow(escrowId);
         if (msg.sender != _resolver) revert Unauthorized(escrowId, msg.sender);
         if (escrow.status != EscrowStatus.Disputed) {
@@ -249,6 +301,7 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 sellerPayout = escrow.amount - buyerPayout;
         escrow.status = EscrowStatus.Completed;
         escrow.completedAt = uint64(block.timestamp);
+        totalEscrowLiability -= escrow.amount;
 
         if (buyerPayout != 0) _sendValue(escrow.buyer, buyerPayout);
         if (sellerPayout != 0) _sendValue(escrow.seller, sellerPayout);
@@ -271,13 +324,13 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         emit ResolverUpdated(previousResolver, newResolver);
     }
 
-    /// @notice Pauses new escrow creation and functions that transfer escrow funds.
+    /// @notice Pauses new escrow creation without blocking existing escrow exits.
     function pause() external onlyOwner {
         _pause();
         emit ContractPaused(msg.sender);
     }
 
-    /// @notice Resumes new escrow creation and functions that transfer escrow funds.
+    /// @notice Resumes new escrow creation.
     function unpause() external onlyOwner {
         _unpause();
         emit ContractUnpaused(msg.sender);
@@ -301,10 +354,21 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         return _resolver;
     }
 
+    /// @notice Returns the aggregate amount owed by all non-terminal escrows.
+    function totalLiability() external view returns (uint256) {
+        return totalEscrowLiability;
+    }
+
+    /// @notice Ownership renunciation is disabled to preserve administration.
+    function renounceOwnership() public view override onlyOwner {
+        revert OwnershipRenunciationDisabled();
+    }
+
     function _refund(Escrow storage escrow, RefundReason reason) private {
         uint256 amount = escrow.amount;
         escrow.status = EscrowStatus.Refunded;
         escrow.completedAt = uint64(block.timestamp);
+        totalEscrowLiability -= amount;
 
         _sendValue(escrow.buyer, amount);
         emit EscrowRefunded(
@@ -326,10 +390,21 @@ contract AccordPayEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         if (!success) revert TransferFailed(recipient, amount);
     }
 
+    function _validateMetadataURI(string calldata metadataURI) private pure {
+        uint256 length = bytes(metadataURI).length;
+        if (length == 0) revert EmptyMetadata();
+        if (length > MAX_METADATA_URI_LENGTH) {
+            revert MetadataTooLong(length, MAX_METADATA_URI_LENGTH);
+        }
+    }
+
+    /// @notice Rejects ordinary direct ETH transfers.
+    /// @dev Only createEscrow accepts value.
     receive() external payable {
         revert UnexpectedEther();
     }
 
+    /// @notice Rejects unknown calls and value-bearing fallback calls.
     fallback() external payable {
         revert UnexpectedEther();
     }

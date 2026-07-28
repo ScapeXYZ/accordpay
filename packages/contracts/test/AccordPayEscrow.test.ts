@@ -112,6 +112,47 @@ describe("AccordPayEscrow", function () {
       );
     });
 
+    it("rejects an unusually long metadata reference", async function () {
+      const { escrow, buyer, seller } = await loadFixture(deployFixture);
+      await expectRevert(
+        escrow
+          .connect(buyer)
+          .createEscrow(
+            seller.address,
+            (await time.latest()) + 100,
+            "x".repeat(2_049),
+            { value: AMOUNT },
+          ),
+        "MetadataTooLong",
+      );
+    });
+
+    it("accepts a metadata reference at the maximum length", async function () {
+      const { escrow, buyer, seller } = await loadFixture(deployFixture);
+      await escrow
+        .connect(buyer)
+        .createEscrow(
+          seller.address,
+          (await time.latest()) + 100,
+          "x".repeat(2_048),
+          { value: AMOUNT },
+        );
+      assert.equal(await escrow.totalLiability(), AMOUNT);
+    });
+
+    it("rejects zero owner and resolver constructor arguments", async function () {
+      const [owner, resolver] = await ethers.getSigners();
+      const factory = await ethers.getContractFactory("AccordPayEscrow");
+      await expectRevert(
+        factory.deploy(ethers.ZeroAddress, resolver.address),
+        "OwnableInvalidOwner",
+      );
+      await expectRevert(
+        factory.deploy(owner.address, ethers.ZeroAddress),
+        "ZeroAddress",
+      );
+    });
+
     it("assigns sequential IDs and stores exact data", async function () {
       const { escrow, buyer, seller } = await loadFixture(deployFixture);
       const deadline = (await time.latest()) + 3_600;
@@ -189,6 +230,14 @@ describe("AccordPayEscrow", function () {
       await expectRevert(
         escrow.connect(seller).markDelivered(escrowId, ""),
         "EmptyMetadata",
+      );
+    });
+
+    it("rejects an unusually long delivery reference", async function () {
+      const { escrow, seller, escrowId } = await loadFixture(createFunded);
+      await expectRevert(
+        escrow.connect(seller).markDelivered(escrowId, "x".repeat(2_049)),
+        "MetadataTooLong",
       );
     });
 
@@ -337,6 +386,26 @@ describe("AccordPayEscrow", function () {
       );
     });
 
+    it("rejects reclaim in the block immediately before the deadline", async function () {
+      const { escrow, buyer, deadline, escrowId } =
+        await loadFixture(createFunded);
+      await time.setNextBlockTimestamp(deadline - 1);
+      await expectRevert(
+        escrow.connect(buyer).reclaimAfterDeadline(escrowId),
+        "DeadlineNotReached",
+      );
+    });
+
+    it("rejects reclaim exactly at the deadline", async function () {
+      const { escrow, buyer, deadline, escrowId } =
+        await loadFixture(createFunded);
+      await time.setNextBlockTimestamp(deadline);
+      await expectRevert(
+        escrow.connect(buyer).reclaimAfterDeadline(escrowId),
+        "DeadlineNotReached",
+      );
+    });
+
     it("rejects reclaim after delivery", async function () {
       const { escrow, buyer, deadline, escrowId } =
         await loadFixture(createDelivered);
@@ -418,6 +487,34 @@ describe("AccordPayEscrow", function () {
       );
     });
 
+    it("assigns odd-wei rounding remainder to the seller without dust", async function () {
+      const { escrow, buyer, seller, resolver } =
+        await loadFixture(deployFixture);
+      const oddAmount = 10_001n;
+      await escrow
+        .connect(buyer)
+        .createEscrow(seller.address, (await time.latest()) + 100, META, {
+          value: oddAmount,
+        });
+      await escrow.connect(buyer).raiseDispute(1);
+      const buyerBefore = await ethers.provider.getBalance(buyer.address);
+      const sellerBefore = await ethers.provider.getBalance(seller.address);
+      await escrow.connect(resolver).resolveDispute(1, 5_000);
+      assert.equal(
+        await ethers.provider.getBalance(buyer.address),
+        buyerBefore + 5_000n,
+      );
+      assert.equal(
+        await ethers.provider.getBalance(seller.address),
+        sellerBefore + 5_001n,
+      );
+      assert.equal(await escrow.totalLiability(), 0n);
+      assert.equal(
+        await ethers.provider.getBalance(await escrow.getAddress()),
+        0n,
+      );
+    });
+
     for (const [label, share] of [
       ["100% buyer", 10_000],
       ["100% seller", 0],
@@ -486,6 +583,19 @@ describe("AccordPayEscrow", function () {
       assert.equal(await escrow.paused(), false);
     });
 
+    it("rejects pause and unpause by non-owner", async function () {
+      const { escrow, owner, stranger } = await loadFixture(deployFixture);
+      await expectRevert(
+        escrow.connect(stranger).pause(),
+        "OwnableUnauthorizedAccount",
+      );
+      await escrow.connect(owner).pause();
+      await expectRevert(
+        escrow.connect(stranger).unpause(),
+        "OwnableUnauthorizedAccount",
+      );
+    });
+
     it("blocks creation while paused", async function () {
       const { escrow, owner, buyer, seller } = await loadFixture(deployFixture);
       await escrow.connect(owner).pause();
@@ -499,16 +609,47 @@ describe("AccordPayEscrow", function () {
       );
     });
 
-    it("blocks fund-moving actions while paused but permits dispute freeze", async function () {
-      const { escrow, owner, buyer, escrowId } =
+    it("allows delivery and dispute freeze while paused", async function () {
+      const { escrow, owner, buyer, seller, escrowId } =
         await loadFixture(createFunded);
       await escrow.connect(owner).pause();
-      await expectRevert(
-        escrow.connect(buyer).reclaimAfterDeadline(escrowId),
-        "EnforcedPause",
-      );
+      await escrow.connect(seller).markDelivered(escrowId, DELIVERY);
       await escrow.connect(buyer).raiseDispute(escrowId);
       assert.equal((await escrow.getEscrow(escrowId)).status, 4n);
+    });
+
+    it("allows release while paused", async function () {
+      const { escrow, owner, buyer, escrowId } =
+        await loadFixture(createDelivered);
+      await escrow.connect(owner).pause();
+      await escrow.connect(buyer).releaseFunds(escrowId);
+      assert.equal(await escrow.totalLiability(), 0n);
+    });
+
+    it("allows seller-approved refund while paused", async function () {
+      const { escrow, owner, seller, escrowId } =
+        await loadFixture(createFunded);
+      await escrow.connect(owner).pause();
+      await escrow.connect(seller).approveRefund(escrowId);
+      assert.equal(await escrow.totalLiability(), 0n);
+    });
+
+    it("allows deadline reclaim while paused", async function () {
+      const { escrow, owner, buyer, deadline, escrowId } =
+        await loadFixture(createFunded);
+      await escrow.connect(owner).pause();
+      await time.increaseTo(deadline + 1);
+      await escrow.connect(buyer).reclaimAfterDeadline(escrowId);
+      assert.equal(await escrow.totalLiability(), 0n);
+    });
+
+    it("allows dispute resolution while paused", async function () {
+      const { escrow, owner, buyer, resolver, escrowId } =
+        await loadFixture(createFunded);
+      await escrow.connect(buyer).raiseDispute(escrowId);
+      await escrow.connect(owner).pause();
+      await escrow.connect(resolver).resolveDispute(escrowId, 5_000);
+      assert.equal(await escrow.totalLiability(), 0n);
     });
 
     it("uses two-step ownership transfer", async function () {
@@ -518,6 +659,56 @@ describe("AccordPayEscrow", function () {
       assert.equal(await escrow.pendingOwner(), nextOwner.address);
       await escrow.connect(nextOwner).acceptOwnership();
       assert.equal(await escrow.owner(), nextOwner.address);
+    });
+
+    it("rejects ownership acceptance by an address other than pending owner", async function () {
+      const { escrow, owner, nextOwner, stranger } =
+        await loadFixture(deployFixture);
+      await escrow.connect(owner).transferOwnership(nextOwner.address);
+      await expectRevert(
+        escrow.connect(stranger).acceptOwnership(),
+        "OwnableUnauthorizedAccount",
+      );
+    });
+
+    it("uses a zero-address ownership transfer to cancel a pending transfer", async function () {
+      const { escrow, owner, nextOwner } = await loadFixture(deployFixture);
+      await escrow.connect(owner).transferOwnership(nextOwner.address);
+      await escrow.connect(owner).transferOwnership(ethers.ZeroAddress);
+      assert.equal(await escrow.pendingOwner(), ethers.ZeroAddress);
+      assert.equal(await escrow.owner(), owner.address);
+    });
+
+    it("disables ownership renunciation", async function () {
+      const { escrow, owner } = await loadFixture(deployFixture);
+      await expectRevert(
+        escrow.connect(owner).renounceOwnership(),
+        "OwnershipRenunciationDisabled",
+      );
+      assert.equal(await escrow.owner(), owner.address);
+    });
+
+    it("rejects renunciation attempts by non-owner", async function () {
+      const { escrow, stranger } = await loadFixture(deployFixture);
+      await expectRevert(
+        escrow.connect(stranger).renounceOwnership(),
+        "OwnableUnauthorizedAccount",
+      );
+    });
+
+    it("permits owner and resolver to be the same secured address", async function () {
+      const [owner] = await ethers.getSigners();
+      const factory = await ethers.getContractFactory("AccordPayEscrow");
+      const escrow: any = await factory.deploy(owner.address, owner.address);
+      await escrow.waitForDeployment();
+      assert.equal(await escrow.owner(), owner.address);
+      assert.equal(await escrow.resolver(), owner.address);
+    });
+
+    it("allows an idempotent resolver update without corrupting state", async function () {
+      const { escrow, owner, resolver } = await loadFixture(deployFixture);
+      await escrow.connect(owner).setResolver(resolver.address);
+      assert.equal(await escrow.resolver(), resolver.address);
     });
 
     it("exposes no owner withdrawal selector", async function () {
@@ -602,6 +793,113 @@ describe("AccordPayEscrow", function () {
         AMOUNT,
       );
       assert.equal((await escrow.getEscrow(1)).status, 3n);
+    });
+
+    it("rolls back a refund and liability when the buyer rejects ETH", async function () {
+      const { escrow, seller } = await loadFixture(deployFixture);
+      const rejector: any = await (
+        await ethers.getContractFactory("RejectingReceiver")
+      ).deploy(await escrow.getAddress());
+      await rejector.waitForDeployment();
+      await rejector.create(
+        seller.address,
+        (await time.latest()) + 3_600,
+        META,
+        { value: AMOUNT },
+      );
+      await expectRevert(
+        escrow.connect(seller).approveRefund(1),
+        "TransferFailed",
+      );
+      assert.equal((await escrow.getEscrow(1)).status, 0n);
+      assert.equal(await escrow.totalLiability(), AMOUNT);
+    });
+
+    it("rolls back dispute resolution when the buyer rejects ETH", async function () {
+      const { escrow, seller, resolver } = await loadFixture(deployFixture);
+      const rejector: any = await (
+        await ethers.getContractFactory("RejectingReceiver")
+      ).deploy(await escrow.getAddress());
+      await rejector.waitForDeployment();
+      await rejector.create(
+        seller.address,
+        (await time.latest()) + 3_600,
+        META,
+        { value: AMOUNT },
+      );
+      await rejector.raiseDispute(1);
+      await expectRevert(
+        escrow.connect(resolver).resolveDispute(1, 10_000),
+        "TransferFailed",
+      );
+      assert.equal((await escrow.getEscrow(1)).status, 4n);
+      assert.equal(await escrow.totalLiability(), AMOUNT);
+    });
+
+    it("rolls back dispute resolution when the seller rejects ETH", async function () {
+      const { escrow, buyer, resolver } = await loadFixture(deployFixture);
+      const rejector: any = await (
+        await ethers.getContractFactory("RejectingReceiver")
+      ).deploy(await escrow.getAddress());
+      await rejector.waitForDeployment();
+      await escrow
+        .connect(buyer)
+        .createEscrow(
+          await rejector.getAddress(),
+          (await time.latest()) + 3_600,
+          META,
+          { value: AMOUNT },
+        );
+      await escrow.connect(buyer).raiseDispute(1);
+      await expectRevert(
+        escrow.connect(resolver).resolveDispute(1, 0),
+        "TransferFailed",
+      );
+      assert.equal((await escrow.getEscrow(1)).status, 4n);
+      assert.equal(await escrow.totalLiability(), AMOUNT);
+    });
+
+    it("keeps forced ETH separate from active liabilities", async function () {
+      const { escrow } = await loadFixture(createFunded);
+      const forcedAmount = 123n;
+      const forceEther: any = await (
+        await ethers.getContractFactory("ForceEther")
+      ).deploy({ value: forcedAmount });
+      await forceEther.waitForDeployment();
+      await forceEther.forceSend(await escrow.getAddress());
+      assert.equal(await escrow.totalLiability(), AMOUNT);
+      assert.equal(
+        await ethers.provider.getBalance(await escrow.getAddress()),
+        AMOUNT + forcedAmount,
+      );
+    });
+
+    it("tracks multiple liabilities across mixed terminal paths", async function () {
+      const { escrow, buyer, seller, resolver } =
+        await loadFixture(deployFixture);
+      const deadline = (await time.latest()) + 3_600;
+      const amounts = [11n, 22n, 33n];
+      for (const amount of amounts) {
+        await escrow
+          .connect(buyer)
+          .createEscrow(seller.address, deadline, META, { value: amount });
+      }
+      assert.equal(await escrow.totalLiability(), 66n);
+
+      await escrow.connect(seller).markDelivered(1, DELIVERY);
+      await escrow.connect(buyer).releaseFunds(1);
+      assert.equal(await escrow.totalLiability(), 55n);
+
+      await escrow.connect(seller).approveRefund(2);
+      assert.equal(await escrow.totalLiability(), 33n);
+
+      await escrow.connect(buyer).raiseDispute(3);
+      await escrow.connect(resolver).resolveDispute(3, 3_333);
+      assert.equal(await escrow.totalLiability(), 0n);
+      assert.equal(
+        await ethers.provider.getBalance(await escrow.getAddress()),
+        0n,
+      );
     });
 
     it("keeps completed escrows terminal", async function () {

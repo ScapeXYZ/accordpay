@@ -10,6 +10,8 @@ Hardhat workspace for the AccordPay native-asset escrow contract.
 
 The owner cannot withdraw, seize, or sweep active escrow funds.
 
+The hardened contract tracks aggregate active liability through `totalLiability()`, limits metadata references to 2,048 bytes, disables ownership renunciation, and restricts pause behavior to new escrow creation. Direct payouts remain an explicitly documented MVP limitation because rejecting recipient contracts can block settlement while preserving atomic rollback.
+
 ## Setup
 
 From the repository root:
@@ -29,6 +31,10 @@ Never commit `.env` or a private key. `.env.example` contains no secrets.
 npm run compile
 npm run test
 npm run coverage
+npm run lint
+npm run dry-run
+npm run security
+npm run export:abi
 npm run clean
 npm run node
 npm run deploy:local
