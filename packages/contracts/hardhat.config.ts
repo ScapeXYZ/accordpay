@@ -4,6 +4,13 @@ import "@nomicfoundation/hardhat-verify";
 import "solidity-coverage";
 import { HardhatUserConfig } from "hardhat/config";
 
+const giwaRpcUrl =
+  process.env.RPC_URL ??
+  process.env.GIWA_SEPOLIA_RPC_URL ??
+  "https://sepolia-rpc.giwa.io";
+const deployerPrivateKey =
+  process.env.PRIVATE_KEY ?? process.env.DEPLOYER_PRIVATE_KEY;
+
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.28",
@@ -20,10 +27,8 @@ const config: HardhatUserConfig = {
     },
     giwaSepolia: {
       chainId: 91342,
-      url: process.env.GIWA_SEPOLIA_RPC_URL ?? "",
-      accounts: process.env.DEPLOYER_PRIVATE_KEY
-        ? [process.env.DEPLOYER_PRIVATE_KEY]
-        : [],
+      url: giwaRpcUrl,
+      accounts: deployerPrivateKey ? [deployerPrivateKey] : [],
     },
   },
   etherscan: {

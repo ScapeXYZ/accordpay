@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Badge, Button } from "../ui";
+import { WalletControl } from "../web3";
+import { Badge } from "../ui";
 import { AvatarPlaceholder } from "./avatar-placeholder";
 import { NotificationPlaceholder } from "./notification-placeholder";
 import styles from "./app-shell.module.css";
@@ -61,9 +62,7 @@ export function AppHeader({
       <div className={styles.headerActions}>
         <Badge status="testnet">GIWA Sepolia</Badge>
         <NotificationPlaceholder />
-        <Button variant="secondary" disabled>
-          Wallet disconnected
-        </Button>
+        <WalletControl compact />
         <AvatarPlaceholder />
       </div>
     </header>

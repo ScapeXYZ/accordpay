@@ -39,10 +39,11 @@ export function Button(props: ButtonOrLinkProps) {
     loading = false,
     loadingText = "Loading",
     className = "",
+    ...elementProps
   } = props;
   const classes = `${styles.button} ${styles[variant]} ${className}`;
 
-  if ("href" in props && props.href) {
+  if ("href" in elementProps && elementProps.href) {
     const {
       href,
       disabled = false,
@@ -50,7 +51,7 @@ export function Button(props: ButtonOrLinkProps) {
       target,
       rel,
       ...anchorProps
-    } = props;
+    } = elementProps;
     const unavailable = disabled || loading;
 
     return (
@@ -81,7 +82,7 @@ export function Button(props: ButtonOrLinkProps) {
     disabled = false,
     type = "button",
     ...buttonProps
-  } = props as ButtonProps;
+  } = elementProps as ButtonHTMLAttributes<HTMLButtonElement>;
 
   return (
     <button

@@ -1,11 +1,11 @@
-import { Button } from "../ui";
+import { WalletControl } from "../web3";
 import styles from "./shared.module.css";
 
-export function WalletPlaceholder({ onConnect }: { onConnect?: () => void }) {
+export function WalletPlaceholder() {
   return (
     <div className={styles.wallet}>
-      <span className={styles.walletStatus}>Wallet disconnected</span>
-      <Button onClick={onConnect}>Connect wallet</Button>
+      <span className={styles.walletStatus}>GIWA Sepolia wallet</span>
+      <WalletControl />
     </div>
   );
 }

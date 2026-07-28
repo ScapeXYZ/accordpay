@@ -1,0 +1,149 @@
+.lookup {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto;
+  gap: var(--space-4);
+  align-items: end;
+}
+
+.contractSummary {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+}
+
+.heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.heading h2 {
+  margin: var(--space-1) 0 0;
+}
+
+.eyebrow {
+  color: var(--color-pine-700);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.details div {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.details dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.details dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.uri {
+  overflow-wrap: anywhere;
+}
+
+.actionPanel,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-background);
+}
+
+.actionPanel p,
+.actions p {
+  margin: 0;
+  color: var(--color-text-subtle);
+}
+
+.formPanel {
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.fullSpan {
+  grid-column: 1 / -1;
+}
+
+.paymentSummary {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  color: var(--color-white);
+  background: var(--color-pine-800);
+}
+
+.paymentSummary div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.paymentSummary dt,
+.paymentSummary dd {
+  margin: 0;
+}
+
+.successLabel {
+  color: var(--color-pine-700);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.createdId {
+  color: var(--color-pine-900);
+  font-size: var(--font-size-2xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.successCopy {
+  margin: 0;
+  color: var(--color-text-subtle);
+  line-height: var(--line-height-base);
+}
+
+.successActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (max-width: 48rem) {
+  .lookup,
+  .details,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fullSpan {
+    grid-column: auto;
+  }
+}

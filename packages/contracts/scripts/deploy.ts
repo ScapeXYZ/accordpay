@@ -24,14 +24,26 @@ async function main() {
   if (!deploymentTransaction)
     throw new Error("Deployment transaction unavailable");
   await contract.waitForDeployment();
+  const receipt = await deploymentTransaction.wait();
+  if (!receipt) throw new Error("Deployment receipt unavailable");
 
   const providerNetwork = await ethers.provider.getNetwork();
+  const deploymentCost = receipt.gasUsed * receipt.gasPrice;
+  const block = await ethers.provider.getBlock(receipt.blockNumber);
   console.log("Network:", network.name);
   console.log("Chain ID:", providerNetwork.chainId.toString());
   console.log("Deployer:", owner);
   console.log("Resolver:", resolver);
   console.log("Contract address:", await contract.getAddress());
   console.log("Deployment transaction hash:", deploymentTransaction.hash);
+  console.log("Block number:", receipt.blockNumber.toString());
+  console.log("Gas used:", receipt.gasUsed.toString());
+  console.log("Effective gas price:", receipt.gasPrice.toString());
+  console.log("Deployment cost:", deploymentCost.toString());
+  console.log(
+    "Deployment timestamp:",
+    block?.timestamp.toString() ?? "unavailable",
+  );
 }
 
 main().catch((error: unknown) => {
