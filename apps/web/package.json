@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "test:lifecycle": "node --test src/features/escrow/escrow-lifecycle.test.mts",
     "test:verification": "node --test src/services/verification/dojang-verification-service.test.mts",
-    "test:names": "node --test src/services/names/upbit-name-resolution.test.mts",
+    "test:names": "node --test src/services/names/upbit-name-resolution.test.mts src/components/web3/connected-wallet-identity.test.mts",
+    "test:notifications": "node --test src/components/app-shell/notification-model.test.mts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

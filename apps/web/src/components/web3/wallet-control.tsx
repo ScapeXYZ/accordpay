@@ -17,8 +17,10 @@ import {
 import { injected } from "wagmi/connectors";
 
 import { giwaSepolia, wagmiConfig } from "@/config/web3";
+import { useUpbitName } from "@/hooks/use-upbit-name";
 
 import { Badge, Button, Spinner } from "../ui";
+import { getConnectedWalletIdentityView } from "./connected-wallet-identity";
 import {
   getProviderSnapshot,
   getServerProviderSnapshot,
@@ -40,10 +42,6 @@ const supportedWallets = [
   { name: "Leap Wallet", rdns: ["io.leapwallet"] },
 ] as const;
 
-function shorten(address: string) {
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
-
 export function WalletControl({ compact = false }: { compact?: boolean }) {
   const connection = useConnection();
   const connect = useConnect();
@@ -58,6 +56,30 @@ export function WalletControl({ compact = false }: { compact?: boolean }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstWalletRef = useRef<HTMLButtonElement>(null);
   const [selectedUid, setSelectedUid] = useState<string>();
+  const connectedAddress = connection.address ?? "";
+  const upbitName = useUpbitName(
+    connectedAddress,
+    connection.status === "connected",
+  );
+  const connectedIdentity = connectedAddress
+    ? getConnectedWalletIdentityView(
+        connectedAddress,
+        upbitName.state,
+        upbitName.result,
+      )
+    : undefined;
+  const refetchUpbitName = upbitName.refetch;
+
+  useEffect(() => {
+    if (connection.status === "connected" && connectedAddress) {
+      void refetchUpbitName();
+    }
+  }, [
+    connectedAddress,
+    connection.chainId,
+    connection.status,
+    refetchUpbitName,
+  ]);
 
   const detectedOptions = useMemo(
     () => announcedProviders,
@@ -110,7 +132,17 @@ export function WalletControl({ compact = false }: { compact?: boolean }) {
   ) {
     return (
       <div className={styles.walletControl}>
-        <span className={styles.connected}>{shorten(connection.address)}</span>
+        {connectedIdentity ? (
+          <span
+            className={styles.connectedIdentity}
+            title={connectedIdentity.statusLabel}
+          >
+            <strong>{connectedIdentity.primary}</strong>
+            {connectedIdentity.secondary ? (
+              <small>{connectedIdentity.secondary}</small>
+            ) : null}
+          </span>
+        ) : null}
         <Button
           variant="secondary"
           loading={switchChain.isPending}
@@ -130,10 +162,29 @@ export function WalletControl({ compact = false }: { compact?: boolean }) {
     return (
       <div className={styles.walletControl}>
         {!compact && <Badge status="testnet">GIWA Sepolia</Badge>}
-        <span className={styles.connected}>
-          <span aria-hidden="true" />
-          {shorten(connection.address)}
+        <span
+          className={styles.connectedIdentity}
+          title={connectedIdentity?.statusLabel}
+          aria-live="polite"
+        >
+          <strong>
+            <span className={styles.connectedDot} aria-hidden="true" />
+            {connectedIdentity?.primary}
+          </strong>
+          {connectedIdentity?.secondary ? (
+            <small>{connectedIdentity.secondary}</small>
+          ) : null}
         </span>
+        <button
+          className={styles.identityRefresh}
+          type="button"
+          onClick={() =>
+            void upbitName.refresh().then(() => upbitName.refetch())
+          }
+          disabled={upbitName.state === "resolving"}
+        >
+          Refresh identity
+        </button>
         <Button variant="ghost" onClick={() => disconnect.mutate()}>
           Disconnect
         </Button>

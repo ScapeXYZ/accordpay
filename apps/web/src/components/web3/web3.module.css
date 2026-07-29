@@ -32,20 +32,48 @@
   outline-offset: 2px;
 }
 
-.connected {
+.connectedIdentity {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-caption);
+}
+
+.connectedIdentity strong {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--color-text-subtle);
-  font-size: var(--font-size-caption);
-  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
 }
 
-.connected > span {
+.connectedIdentity small {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+
+.connectedDot {
   width: 0.5rem;
   height: 0.5rem;
+  flex: 0 0 auto;
   border-radius: var(--radius-full);
-  background: var(--color-success-600);
+  background: var(--color-success-700);
+}
+
+.identityRefresh {
+  padding: var(--space-1);
+  border: 0;
+  color: var(--color-pine-700);
+  background: transparent;
+  font: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+
+.identityRefresh:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .walletDialog {
@@ -210,7 +238,8 @@
 }
 
 @media (max-width: 48rem) {
-  .connected {
+  .connectedIdentity,
+  .identityRefresh {
     display: none;
   }
 }

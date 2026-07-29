@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { WalletControl } from "../web3";
 import { Badge } from "../ui";
 import { AvatarPlaceholder } from "./avatar-placeholder";
-import { NotificationPlaceholder } from "./notification-placeholder";
+import { NotificationPanel } from "./notification-panel";
 import styles from "./app-shell.module.css";
 
 const titles: Record<string, string> = {
@@ -61,7 +61,7 @@ export function AppHeader({
       </div>
       <div className={styles.headerActions}>
         <Badge status="testnet">GIWA Sepolia</Badge>
-        <NotificationPlaceholder />
+        <NotificationPanel />
         <WalletControl compact />
         <AvatarPlaceholder />
       </div>

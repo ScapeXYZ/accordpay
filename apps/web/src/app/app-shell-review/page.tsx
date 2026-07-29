@@ -13,7 +13,7 @@ import {
   AppSidebar,
   AvatarPlaceholder,
   MobileNavigation,
-  NotificationPlaceholder,
+  NotificationPanel,
 } from "@/components/app-shell";
 
 import styles from "./page.module.css";
@@ -53,7 +53,7 @@ export default function AppShellReviewPage() {
             <Card>
               <Grid columns={4} gap={4}>
                 <NetworkIndicator />
-                <NotificationPlaceholder />
+                <NotificationPanel />
                 <AvatarPlaceholder />
                 <WalletPlaceholder />
               </Grid>
