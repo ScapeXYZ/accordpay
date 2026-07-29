@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import {
   decodeEventLog,
+  getAddress,
   isAddress,
   parseEther,
   type Abi,
@@ -11,12 +12,16 @@ import {
 import { useConnection, usePublicClient, useReadContract } from "wagmi";
 
 import { Stack } from "@/components/layout";
+import { Web3Identity } from "@/components/shared/web3-identity";
 import { TransactionStatus, WalletControl } from "@/components/web3";
 import { Alert, Button, Card, Input, Select } from "@/components/ui";
 import { accordPayEscrowContract } from "@/config/contracts";
 import { giwaSepolia } from "@/config/web3";
+import { useUpbitName } from "@/hooks/use-upbit-name";
+import { isUpbitName } from "@/services/names";
 
 import { useEscrowTransaction } from "./use-escrow-transaction";
+import { prepareSellerAddress } from "./seller-resolution";
 import styles from "./escrow.module.css";
 
 export function CreateEscrowForm() {
@@ -28,6 +33,13 @@ export function CreateEscrowForm() {
   const [amount, setAmount] = useState("");
   const [formError, setFormError] = useState("");
   const [createdEscrowId, setCreatedEscrowId] = useState<bigint>();
+  const sellerName = useUpbitName(seller);
+  const resolvedSeller = isAddress(seller.trim())
+    ? getAddress(seller.trim())
+    : sellerName.result.status === "confirmed"
+      ? sellerName.result.address
+      : undefined;
+  const [confirmedSeller, setConfirmedSeller] = useState("");
 
   const retrieveEscrowId = useCallback(
     async (receipt: TransactionReceipt) => {
@@ -89,11 +101,30 @@ export function CreateEscrowForm() {
     event.preventDefault();
     setFormError("");
     setCreatedEscrowId(undefined);
-    if (!isAddress(seller)) {
-      setFormError("Enter a valid non-zero seller address.");
+    let preparedSeller: `0x${string}`;
+    try {
+      preparedSeller = prepareSellerAddress(
+        seller,
+        sellerName.result,
+        confirmedSeller,
+      );
+    } catch {
+      setFormError(
+        isUpbitName(seller)
+          ? "The Upbit Web3 Name must resolve with matching forward and reverse records."
+          : "Enter a valid non-zero seller address or username.up.id.",
+      );
       return;
     }
-    if (seller.toLowerCase() === connection.address?.toLowerCase()) {
+    if (
+      isUpbitName(seller) &&
+      confirmedSeller !==
+        `${sellerName.result.status === "confirmed" ? sellerName.result.name : ""}:${resolvedSeller}`
+    ) {
+      setFormError("Confirm the resolved seller address before continuing.");
+      return;
+    }
+    if (preparedSeller.toLowerCase() === connection.address?.toLowerCase()) {
       setFormError("Buyer and seller must be different addresses.");
       return;
     }
@@ -107,15 +138,34 @@ export function CreateEscrowForm() {
       return;
     }
     try {
+      let sellerForContract = preparedSeller;
+      if (isUpbitName(seller)) {
+        const fresh = await sellerName.refresh();
+        if (
+          fresh.status !== "confirmed" ||
+          fresh.address.toLowerCase() !== preparedSeller.toLowerCase()
+        ) {
+          setConfirmedSeller("");
+          setFormError(
+            "The resolved seller address changed or could not be reconfirmed. Review it before signing.",
+          );
+          return;
+        }
+        sellerForContract = fresh.address;
+      }
       const value = parseEther(amount);
       if (value <= BigInt(0)) throw new Error();
       await transaction.execute({
         functionName: "createEscrow",
-        args: [seller, deadlineSeconds, metadataURI],
+        args: [sellerForContract, deadlineSeconds, metadataURI],
         value,
       });
-    } catch {
-      setFormError("Enter a Test ETH amount greater than zero.");
+    } catch (error) {
+      setFormError(
+        error instanceof Error && error.message
+          ? error.message
+          : "The escrow transaction could not be prepared.",
+      );
     }
   }
 
@@ -141,13 +191,70 @@ export function CreateEscrowForm() {
           />
         )}
         <div className={styles.formGrid}>
-          <Input
-            label="Seller wallet address"
-            value={seller}
-            onChange={(event) => setSeller(event.target.value)}
-            placeholder="0x…"
-            required
-          />
+          <div className={styles.verificationField}>
+            <Input
+              label="Seller wallet address or Upbit Web3 Name"
+              value={seller}
+              onChange={(event) => {
+                setSeller(event.target.value);
+                setConfirmedSeller("");
+              }}
+              placeholder="0x… or username.up.id"
+              required
+            />
+            {resolvedSeller ? (
+              <div className={styles.verificationResult} aria-live="polite">
+                <Web3Identity
+                  address={resolvedSeller}
+                  label="Resolved seller identity"
+                />
+              </div>
+            ) : null}
+            {isUpbitName(seller) && (
+              <div className={styles.nameResolution} aria-live="polite">
+                <strong>
+                  {sellerName.state === "resolving"
+                    ? "Resolving"
+                    : sellerName.result.status === "confirmed"
+                      ? "Name confirmed"
+                      : sellerName.result.status === "not-found"
+                        ? "No name found"
+                        : sellerName.result.status === "mismatch"
+                          ? "Name/address mismatch"
+                          : "Resolution unavailable"}
+                </strong>
+                {sellerName.result.status === "confirmed" && (
+                  <>
+                    <code>{sellerName.result.address}</code>
+                    <label className={styles.confirmIdentity}>
+                      <input
+                        type="checkbox"
+                        checked={
+                          confirmedSeller ===
+                          `${sellerName.result.name}:${sellerName.result.address}`
+                        }
+                        onChange={(event) =>
+                          setConfirmedSeller(
+                            event.target.checked
+                              ? `${sellerName.result.name}:${sellerName.result.address}`
+                              : "",
+                          )
+                        }
+                      />
+                      I confirm this is the intended seller address.
+                    </label>
+                  </>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => void sellerName.refetch()}
+                >
+                  Refresh name
+                </Button>
+              </div>
+            )}
+          </div>
           <Input
             className={styles.fullSpan}
             label="Metadata URI"
@@ -181,6 +288,23 @@ export function CreateEscrowForm() {
             options={[{ label: "GIWA Sepolia Test ETH", value: "eth" }]}
           />
         </div>
+        <Card variant="tinted">
+          <Stack gap={2}>
+            <strong>I do not have an Upbit Web3 Name</strong>
+            <p>
+              Use the official GIWA process: complete or issue Dojang, claim
+              VerifiedToken, issue an UP ID, and sign each required transaction.
+              Then return here and refresh identity.
+            </p>
+            <Button
+              href="https://sepolia-playground.giwa.io/"
+              target="_blank"
+              variant="secondary"
+            >
+              Get an Upbit Web3 Name
+            </Button>
+          </Stack>
+        </Card>
         <dl className={styles.paymentSummary}>
           <div>
             <dt>Escrow amount</dt>

@@ -1,5 +1,6 @@
 import { Container, Grid, PageHeader, Stack } from "@/components/layout";
 import { WalletPlaceholder, WatermarkSurface } from "@/components/shared";
+import { Web3Identity } from "@/components/shared/web3-identity";
 import { Badge, Button, Card } from "@/components/ui";
 
 import styles from "./app-pages.module.css";
@@ -12,6 +13,7 @@ const agreements = [
     "delivered",
     "1.25 Test ETH",
     "Aug 14, 2026",
+    "0xFC1DC0f5C79a0a47E733476d61209E734a649094",
   ],
   [
     "ACP-000002",
@@ -20,6 +22,7 @@ const agreements = [
     "pending",
     "0.80 Test ETH",
     "Aug 18, 2026",
+    "0x77489c28FBd71Be2f78F2eC206cDe5C39A44290d",
   ],
   [
     "ACP-000003",
@@ -28,6 +31,7 @@ const agreements = [
     "disputed",
     "2.00 Test ETH",
     "Aug 21, 2026",
+    "0xFC1DC0f5C79a0a47E733476d61209E734a649094",
   ],
 ] as const;
 
@@ -90,26 +94,32 @@ export default function DashboardPage() {
         <Stack gap={4}>
           <h2 className={styles.sectionTitle}>Agreements requiring action</h2>
           <ul className={styles.agreementList}>
-            {agreements.map(([id, title, role, status, amount, deadline]) => (
-              <li className={styles.agreementItem} key={id}>
-                <div>
-                  <h3>
-                    {id} — {title}
-                  </h3>
-                  <p>
-                    {role} role · Demonstration status · Deadline {deadline}
-                  </p>
-                </div>
-                <Badge status={status}>
-                  {status === "delivered"
-                    ? "Buyer review required"
-                    : status === "pending"
-                      ? "Awaiting seller delivery"
-                      : "Dispute demonstration"}
-                </Badge>
-                <span className={styles.amount}>{amount}</span>
-              </li>
-            ))}
+            {agreements.map(
+              ([id, title, role, status, amount, deadline, counterparty]) => (
+                <li className={styles.agreementItem} key={id}>
+                  <div>
+                    <h3>
+                      {id} — {title}
+                    </h3>
+                    <p>
+                      {role} role · Demonstration status · Deadline {deadline}
+                    </p>
+                    <Web3Identity
+                      address={counterparty}
+                      label="Counterparty identity (live name lookup)"
+                    />
+                  </div>
+                  <Badge status={status}>
+                    {status === "delivered"
+                      ? "Buyer review required"
+                      : status === "pending"
+                        ? "Awaiting seller delivery"
+                        : "Dispute demonstration"}
+                  </Badge>
+                  <span className={styles.amount}>{amount}</span>
+                </li>
+              ),
+            )}
           </ul>
         </Stack>
         <Grid columns={2} gap={6}>

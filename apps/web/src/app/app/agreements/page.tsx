@@ -23,7 +23,7 @@ export default async function AgreementsPage({
           title="Live GIWA Sepolia contract data"
           description="Escrows are read directly by numeric ID. Wallet-specific lists require event indexing and are not inferred or fabricated."
         />
-        <EscrowReader initialId={id} />
+        <EscrowReader key={id ?? "lookup"} initialId={id} />
       </Stack>
     </Container>
   );

@@ -11,10 +11,16 @@ export function TransactionStatus({
   if (transaction.phase === "idle") return null;
 
   if (transaction.phase === "error") {
+    const title = {
+      walletRejected: "Wallet request rejected",
+      reverted: "Transaction reverted",
+      rpc: "GIWA RPC unavailable",
+      unknown: "Transaction failed",
+    }[transaction.errorKind ?? "unknown"];
     return (
       <Alert
         variant="error"
-        title="Transaction failed"
+        title={title}
         description={
           transaction.error ?? "The transaction could not be completed."
         }
@@ -29,7 +35,9 @@ export function TransactionStatus({
   }[transaction.phase];
   const description =
     transaction.phase === "confirmed"
-      ? `${transaction.confirmations} GIWA confirmation received. Contract state has been refreshed.`
+      ? transaction.refreshError
+        ? `${transaction.confirmations} GIWA confirmation received, but refreshing contract state failed: ${transaction.refreshError}`
+        : `${transaction.confirmations} GIWA confirmation received. Contract state has been refreshed.`
       : transaction.phase === "submitted"
         ? "The transaction is waiting for one GIWA block confirmation."
         : "Review the exact contract action and network in your wallet.";

@@ -1,0 +1,47 @@
+.identity {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.label,
+.state {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+.primaryLine,
+.addressLine {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.name {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+.addressButton,
+.refresh {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  padding: 0;
+  text-align: left;
+}
+.addressButton {
+  font-family: var(--font-family-mono);
+  overflow-wrap: anywhere;
+}
+.refresh {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+.addressButton:focus-visible,
+.refresh:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
