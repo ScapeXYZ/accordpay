@@ -27,7 +27,7 @@ const facts = [
     [
       "01",
       "Define the agreement",
-      "Set the seller, delivery deadline, Test ETH amount, and a public metadata reference.",
+      "Set the counterparty, delivery deadline, Test ETH amount, and a public metadata reference.",
     ],
     [
       "02",
@@ -37,17 +37,17 @@ const facts = [
     [
       "03",
       "Settle with clear roles",
-      "The seller marks delivery. The buyer releases funds, or either party can use documented refund and dispute paths.",
+      "The counterparty marks delivery. The funding party releases funds, or either party can use the documented refund and dispute paths.",
     ],
   ],
   protect = [
     [
-      "For buyers",
+      "For funding parties",
       "Release after delivery",
-      "Funds remain in escrow until delivery is marked and the buyer authorizes release, or another permitted terminal path completes.",
+      "Funds remain in escrow until delivery is marked and the funding party authorizes release, or another permitted terminal path completes.",
     ],
     [
-      "For sellers",
+      "For counterparties",
       "Funded before work begins",
       "Every on-chain agreement is funded when created, so there is no unfunded Created state to mistake for a deposit.",
     ],
@@ -110,12 +110,12 @@ function MotionShowcase() {
           ● Product preview · Illustrative lifecycle
         </small>
         <div className={s.buyer}>
-          <small>BUYER</small>
+          <small>FUNDING PARTY</small>
           <b>buyer.up</b>
           <code>0x7748...FB</code>
         </div>
         <div className={s.seller}>
-          <small>SELLER</small>
+          <small>COUNTERPARTY</small>
           <b>seller.up</b>
           <code>0x91C2...4A</code>
         </div>
@@ -146,10 +146,10 @@ function MotionShowcase() {
         <aside className={s.chat}>
           <small>ACCORD CHAT · DEMO</small>
           <p>
-            <b>Seller</b>Delivery completed.
+            <b>Counterparty</b>Delivery completed.
           </p>
           <p>
-            <b>Buyer</b>Reviewing delivery.
+            <b>Funding Party</b>Reviewing delivery.
           </p>
           <span>Delivery marked</span>
         </aside>
@@ -285,9 +285,9 @@ export function AccordPayEntrance() {
                 <em>agreement.</em>
               </h1>
               <p className={s.lead}>
-                AccordPay gives buyers and sellers a clear, programmable escrow
-                workflow for funded agreements, delivery, release, refunds, and
-                disputes on GIWA Sepolia.
+                AccordPay gives funding parties and counterparties a clear,
+                programmable escrow workflow for funded agreements, delivery,
+                release, refunds, and disputes on GIWA Sepolia.
               </p>
               <div className={s.actions}>
                 <Link className={s.primary} href="/app">
@@ -309,13 +309,13 @@ export function AccordPayEntrance() {
               </header>
               <div className={s.parties}>
                 <div>
-                  <small>Buyer</small>
+                  <small>Funding Party</small>
                   <b>buyer.up</b>
                   <code>0x8C2A...19F0</code>
                 </div>
                 <strong>0.05 Test ETH</strong>
                 <div>
-                  <small>Seller</small>
+                  <small>Counterparty</small>
                   <b>seller.up</b>
                   <code>0x3F91...72B4</code>
                 </div>
@@ -484,9 +484,10 @@ export function AccordPayEntrance() {
             href="https://x.com/GIWA_Accordpay"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Follow AccordPay on X"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 4l14 16M19 4L5 20" />
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.657l-5.214-6.817-5.967 6.817H1.68l7.73-8.835L1.254 2.25h6.826l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
             </svg>
             @GIWA_Accordpay
           </a>

@@ -5,7 +5,7 @@ import { AccordPayEntrance } from "./accordpay-entrance";
 export const metadata: Metadata = {
   title: "AccordPay | Secure Agreements on GIWA",
   description:
-    "Secure agreements, verified identities and escrow settlement built for the GIWA ecosystem.",
+    "AccordPay is a GIWA-native escrow platform for secure, funded peer-to-peer agreements with transparent settlement and verified identity context.",
 };
 
 export default function Home() {

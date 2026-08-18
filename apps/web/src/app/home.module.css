@@ -811,13 +811,24 @@
   animation: flowSignal 6s linear infinite;
 }
 .xLink {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: color 0.2s;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    transform 0.2s;
+}
+.xLink svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  fill: currentColor;
+  stroke: none;
 }
 .xLink:hover {
   color: var(--accent);
+  transform: translateY(-1px);
 }
 .themeButton {
   display: grid;
