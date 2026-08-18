@@ -7,6 +7,7 @@ import { AppHeader } from "./app-header";
 import { AppSidebar } from "./app-sidebar";
 import { MobileNavigation } from "./mobile-navigation";
 import styles from "./app-shell.module.css";
+import { AccordChatLauncher } from "@/components/deal-room";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -35,6 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main id="application-content" className={styles.main} tabIndex={-1}>
           {children}
         </main>
+        <AccordChatLauncher />
       </div>
     </div>
   );

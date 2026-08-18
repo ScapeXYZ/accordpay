@@ -9,6 +9,7 @@ import {
   notificationPanelReducer,
   notificationStorageKey,
   notificationsFromContractLogs,
+  notificationsFromTransactions,
 } from "./notification-model.ts";
 
 const address = "0x77489c28FBd71Be2f78F2eC206cDe5C39A44290d" as Address;
@@ -81,4 +82,28 @@ test("read-state keys are isolated by account and network", () => {
     notificationStorageKey(91_342, address),
     notificationStorageKey(1, address),
   );
+});
+
+test("shared normalized activity maps to notification data", () => {
+  const notifications = notificationsFromTransactions([
+    {
+      key: `${hash}:0`,
+      eventName: "EscrowCreated",
+      eventLabel: "Escrow created",
+      escrowId: 8n,
+      agreementId: "ACP-000008",
+      role: "Buyer",
+      amount: 1n,
+      amountLabel: "0.000000000000000001 Test ETH",
+      status: "funded",
+      blockNumber: 100n,
+      timestamp: null,
+      transactionHash: hash,
+      explorerUrl: `https://sepolia-explorer.giwa.io/tx/${hash}`,
+      logIndex: 0,
+    },
+  ]);
+  assert.equal(notifications.length, 1);
+  assert.equal(notifications[0].escrowId, 8n);
+  assert.equal(notifications[0].title, "Escrow funded");
 });

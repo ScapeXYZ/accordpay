@@ -1,10 +1,6 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
 
-:root {
-  color-scheme: light;
-}
-
 * {
   box-sizing: border-box;
 }

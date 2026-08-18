@@ -36,7 +36,7 @@
 }
 
 .primary {
-  color: var(--color-white);
+  color: var(--color-static-white);
   background: var(--color-pine-600);
 }
 
@@ -65,7 +65,7 @@
 }
 
 .destructive {
-  color: var(--color-white);
+  color: var(--color-static-white);
   background: var(--color-error-700);
 }
 

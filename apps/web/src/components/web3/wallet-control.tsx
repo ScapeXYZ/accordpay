@@ -14,6 +14,7 @@ import {
   useDisconnect,
   useSwitchChain,
 } from "wagmi";
+import { reconnect } from "@wagmi/core";
 import { injected } from "wagmi/connectors";
 
 import { giwaSepolia, wagmiConfig } from "@/config/web3";
@@ -30,6 +31,12 @@ import {
   type Eip6963ProviderDetail,
 } from "./eip6963-discovery";
 import styles from "./web3.module.css";
+import {
+  matchesStoredConnector,
+  parseStoredWalletConnector,
+  serializeWalletConnector,
+  WALLET_CONNECTOR_STORAGE_KEY,
+} from "./wallet-reconnect";
 
 const supportedWallets = [
   { name: "MetaMask", rdns: ["io.metamask"] },
@@ -56,6 +63,7 @@ export function WalletControl({ compact = false }: { compact?: boolean }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstWalletRef = useRef<HTMLButtonElement>(null);
   const [selectedUid, setSelectedUid] = useState<string>();
+  const reconnectAttempted = useRef(false);
   const connectedAddress = connection.address ?? "";
   const upbitName = useUpbitName(
     connectedAddress,
@@ -97,6 +105,66 @@ export function WalletControl({ compact = false }: { compact?: boolean }) {
       dialogRef.current.close();
     }
   }, [connection.status]);
+
+  useEffect(() => {
+    const stored = parseStoredWalletConnector(
+      window.localStorage.getItem(WALLET_CONNECTOR_STORAGE_KEY),
+    );
+    if (stored) requestEip6963Providers();
+  }, []);
+
+  useEffect(() => {
+    if (
+      reconnectAttempted.current ||
+      connection.status !== "disconnected" ||
+      announcedProviders.length === 0
+    ) {
+      return;
+    }
+    const stored = parseStoredWalletConnector(
+      window.localStorage.getItem(WALLET_CONNECTOR_STORAGE_KEY),
+    );
+    if (!stored) return;
+    const detail = announcedProviders.find((provider) =>
+      matchesStoredConnector(stored, provider.info),
+    );
+    if (!detail) return;
+    reconnectAttempted.current = true;
+    const connector = wagmiConfig._internal.connectors.setup(
+      injected({
+        target: {
+          icon: safeWalletIcon(detail.info.icon),
+          id: detail.info.rdns,
+          name: detail.info.name,
+          provider: detail.provider,
+        },
+      }),
+    );
+    void reconnect(wagmiConfig, { connectors: [connector] }).catch(() => {
+      reconnectAttempted.current = false;
+    });
+  }, [announcedProviders, connection.status]);
+
+  useEffect(() => {
+    if (connection.status !== "connected" || !selectedUid) return;
+    const detail = announcedProviders.find(
+      (provider) => provider.info.uuid === selectedUid,
+    );
+    if (!detail) return;
+    window.localStorage.setItem(
+      WALLET_CONNECTOR_STORAGE_KEY,
+      serializeWalletConnector({
+        uuid: detail.info.uuid,
+        rdns: detail.info.rdns,
+      }),
+    );
+  }, [announcedProviders, connection.status, selectedUid]);
+
+  function disconnectExplicitly() {
+    window.localStorage.removeItem(WALLET_CONNECTOR_STORAGE_KEY);
+    reconnectAttempted.current = true;
+    disconnect.mutate();
+  }
 
   function openDialog() {
     setSelectedUid(undefined);
@@ -151,7 +219,7 @@ export function WalletControl({ compact = false }: { compact?: boolean }) {
         >
           Switch to GIWA Sepolia
         </Button>
-        <Button variant="ghost" onClick={() => disconnect.mutate()}>
+        <Button variant="ghost" onClick={disconnectExplicitly}>
           Disconnect
         </Button>
       </div>
@@ -185,7 +253,7 @@ export function WalletControl({ compact = false }: { compact?: boolean }) {
         >
           Refresh identity
         </button>
-        <Button variant="ghost" onClick={() => disconnect.mutate()}>
+        <Button variant="ghost" onClick={disconnectExplicitly}>
           Disconnect
         </Button>
       </div>

@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { BaseError, type Hash, type TransactionReceipt } from "viem";
+import { type Hash, type TransactionReceipt } from "viem";
 import { useConnection, usePublicClient, useWriteContract } from "wagmi";
 
 import { accordPayEscrowContract } from "@/config/contracts";
 import { giwaSepolia } from "@/config/web3";
+import { classifyEscrowTransactionError } from "./transaction-errors";
 
 export type TransactionState = {
   phase: "idle" | "awaitingSignature" | "submitted" | "confirmed" | "error";
@@ -20,55 +21,6 @@ const initialState: TransactionState = {
   phase: "idle",
   confirmations: 0,
 };
-
-function classifyError(error: unknown): {
-  error: string;
-  errorKind: NonNullable<TransactionState["errorKind"]>;
-} {
-  const message =
-    error instanceof BaseError
-      ? error.shortMessage || error.message
-      : error instanceof Error
-        ? error.message
-        : "Unknown transaction error.";
-  const normalized = message.toLowerCase();
-
-  if (
-    normalized.includes("user rejected") ||
-    normalized.includes("user denied") ||
-    normalized.includes("rejected the request") ||
-    normalized.includes("code 4001")
-  ) {
-    return {
-      error: "The wallet request was rejected. No transaction was submitted.",
-      errorKind: "walletRejected",
-    };
-  }
-  if (
-    normalized.includes("revert") ||
-    normalized.includes("execution reverted")
-  ) {
-    return {
-      error: message,
-      errorKind: "reverted",
-    };
-  }
-  if (
-    normalized.includes("rpc") ||
-    normalized.includes("network") ||
-    normalized.includes("fetch") ||
-    normalized.includes("timeout")
-  ) {
-    return {
-      error: message,
-      errorKind: "rpc",
-    };
-  }
-  if (error instanceof BaseError) {
-    return { error: error.shortMessage || error.message, errorKind: "unknown" };
-  }
-  return { error: message, errorKind: "unknown" };
-}
 
 export function useEscrowTransaction(
   onConfirmed?: (receipt: TransactionReceipt) => void | Promise<void>,
@@ -121,6 +73,35 @@ export function useEscrowTransaction(
 
       try {
         pendingRef.current = true;
+        const account = connection.address;
+        if (!account)
+          throw new Error("The connected wallet address is unavailable.");
+        await publicClient.simulateContract({
+          address: accordPayEscrowContract.address,
+          abi: accordPayEscrowContract.abi,
+          functionName,
+          args,
+          value,
+          account,
+        });
+        const estimatedGas = await publicClient.estimateContractGas({
+          address: accordPayEscrowContract.address,
+          abi: accordPayEscrowContract.abi,
+          functionName,
+          args,
+          value,
+          account,
+        });
+        const latestBlock = await publicClient.getBlock({
+          blockTag: "latest",
+        });
+        const bufferedGas = (estimatedGas * 120n) / 100n;
+        const safeBlockMaximum =
+          latestBlock.gasLimit > 100_000n
+            ? latestBlock.gasLimit - 100_000n
+            : latestBlock.gasLimit;
+        const gas =
+          bufferedGas < safeBlockMaximum ? bufferedGas : safeBlockMaximum;
         setTransaction({ phase: "awaitingSignature", confirmations: 0 });
         const hash = await writeContract.mutateAsync({
           address: accordPayEscrowContract.address,
@@ -128,6 +109,7 @@ export function useEscrowTransaction(
           functionName,
           args,
           value,
+          gas,
           chainId: giwaSepolia.id,
         });
         setTransaction({ phase: "submitted", hash, confirmations: 0 });
@@ -140,18 +122,22 @@ export function useEscrowTransaction(
         }
         try {
           await onConfirmed?.(receipt);
+          window.dispatchEvent(new Event("accordpay-lifecycle-confirmed"));
           setTransaction({ phase: "confirmed", hash, confirmations: 1 });
         } catch (refreshError) {
           setTransaction({
             phase: "confirmed",
             hash,
             confirmations: 1,
-            refreshError: classifyError(refreshError).error,
+            refreshError: classifyEscrowTransactionError(refreshError).error,
           });
         }
         return receipt;
       } catch (error) {
-        const classified = classifyError(error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("[AccordPay transaction]", error);
+        }
+        const classified = classifyEscrowTransactionError(error);
         setTransaction({
           phase: "error",
           confirmations: 0,
@@ -163,6 +149,7 @@ export function useEscrowTransaction(
     },
     [
       connection.chainId,
+      connection.address,
       connection.status,
       onConfirmed,
       publicClient,

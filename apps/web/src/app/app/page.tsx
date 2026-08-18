@@ -1,162 +1,128 @@
-import { Container, Grid, PageHeader, Stack } from "@/components/layout";
-import { WalletPlaceholder, WatermarkSurface } from "@/components/shared";
-import { Web3Identity } from "@/components/shared/web3-identity";
+import { Container, PageHeader, Stack } from "@/components/layout";
 import { Badge, Button, Card } from "@/components/ui";
 
-import styles from "./app-pages.module.css";
+import styles from "./service-hub.module.css";
 
-const agreements = [
-  [
-    "ACP-000001",
-    "Brand identity delivery",
-    "Seller",
-    "delivered",
-    "1.25 Test ETH",
-    "Aug 14, 2026",
-    "0xFC1DC0f5C79a0a47E733476d61209E734a649094",
-  ],
-  [
-    "ACP-000002",
-    "Application prototype",
-    "Buyer",
-    "pending",
-    "0.80 Test ETH",
-    "Aug 18, 2026",
-    "0x77489c28FBd71Be2f78F2eC206cDe5C39A44290d",
-  ],
-  [
-    "ACP-000003",
-    "Research engagement",
-    "Seller",
-    "disputed",
-    "2.00 Test ETH",
-    "Aug 21, 2026",
-    "0xFC1DC0f5C79a0a47E733476d61209E734a649094",
-  ],
+const services = [
+  {
+    title: "Jobs & Services",
+    status: "Available",
+    description:
+      "Browse jobs, contact clients, agree on terms, and prepare secure payment through GIWA escrow.",
+    actions: [
+      { label: "Browse preview", href: "/app/jobs" },
+      { label: "Post-job preview", href: "/app/jobs/post" },
+    ],
+  },
+  {
+    title: "Secure Escrow Agreements",
+    status: "Available",
+    description:
+      "Create a direct agreement with another user, approve the final terms, fund escrow, submit delivery proof, and release or refund payment.",
+    actions: [{ label: "Create agreement", href: "/app?accordChat=new" }],
+  },
+  {
+    title: "Digital Goods",
+    status: "Coming soon",
+    description: "Protected purchase and delivery workflows for digital goods.",
+  },
+  {
+    title: "NFT Utility Trading",
+    status: "Coming soon",
+    description: "Agreement-led exchange for utility-bearing digital assets.",
+  },
+  {
+    title: "NFT Pre-Market Deals",
+    status: "Coming soon",
+    description: "Structured pre-market agreements with explicit escrow terms.",
+  },
+  {
+    title: "Flight Booking",
+    status: "Coming soon",
+    description: "Escrow-supported travel and flight-payment coordination.",
+  },
+  {
+    title: "Merchant API",
+    status: "Coming soon",
+    description: "Programmable escrow infrastructure for merchant workflows.",
+  },
+  {
+    title: "Service Marketplace",
+    status: "Coming soon",
+    description: "Discover providers and move accepted work into Accord Chat.",
+  },
 ] as const;
 
-export default function DashboardPage() {
+export default function ServiceHubPage() {
   return (
     <Container size="wide">
       <Stack gap={8}>
         <PageHeader
-          eyebrow="Agreement workspace"
-          title="Dashboard"
-          description="Live GIWA data is not connected. This shell demonstrates the intended operational hierarchy."
+          eyebrow="AccordPay Service Hub"
+          title="Hire, work, agree, and get paid securely."
+          description="AccordPay helps clients and service providers agree on terms, communicate, submit work, and protect payment through GIWA escrow."
           showTestnetBadge
-          primaryAction={<Button href="/app/create">Create escrow</Button>}
+          primaryAction={<Button href="/app/jobs">Browse jobs</Button>}
           secondaryAction={
-            <Button href="/app/agreements" variant="secondary">
-              View agreements
+            <Button href="/app/jobs/post" variant="secondary">
+              Post a job
             </Button>
           }
         />
-        <p className={styles.disclosure}>
-          Demonstration data — no live wallet or blockchain connection
-        </p>
-        <section className={styles.walletPanel}>
-          <div>
-            <h2>Wallet disconnected</h2>
-            <p>
-              Wallet integration is not active yet. No address or balance is
-              available.
-            </p>
-          </div>
-          <WalletPlaceholder />
-        </section>
-        <Grid columns={4} gap={4}>
-          {[
-            [
-              "3",
-              "Agreements requiring action",
-              "Items where this demonstration role must act",
-            ],
-            [
-              "4",
-              "Active demonstration escrows",
-              "Non-terminal example agreements",
-            ],
-            [
-              "12",
-              "Completed demonstration escrows",
-              "Released example agreements only",
-            ],
-            ["1", "Disputed demonstration escrows", "Frozen example agreement"],
-          ].map(([value, label, definition]) => (
-            <Card variant="interactive" className={styles.metric} key={label}>
-              <span>Demonstration</span>
-              <strong>{value}</strong>
-              <p>{label}</p>
-              <p>{definition}; not sourced from GIWA.</p>
-            </Card>
-          ))}
-        </Grid>
-        <Stack gap={4}>
-          <h2 className={styles.sectionTitle}>Agreements requiring action</h2>
-          <ul className={styles.agreementList}>
-            {agreements.map(
-              ([id, title, role, status, amount, deadline, counterparty]) => (
-                <li className={styles.agreementItem} key={id}>
-                  <div>
-                    <h3>
-                      {id} — {title}
-                    </h3>
-                    <p>
-                      {role} role · Demonstration status · Deadline {deadline}
-                    </p>
-                    <Web3Identity
-                      address={counterparty}
-                      label="Counterparty identity (live name lookup)"
-                    />
-                  </div>
-                  <Badge status={status}>
-                    {status === "delivered"
-                      ? "Buyer review required"
-                      : status === "pending"
-                        ? "Awaiting seller delivery"
-                        : "Dispute demonstration"}
-                  </Badge>
-                  <span className={styles.amount}>{amount}</span>
-                </li>
-              ),
-            )}
-          </ul>
-        </Stack>
-        <Grid columns={2} gap={6}>
-          <Card>
-            <h2 className={styles.sectionTitle}>Recent activity</h2>
-            <div className={styles.activityList}>
-              {[
-                "Escrow created · ACP-000003",
-                "Delivery marked · ACP-000001",
-                "Funds released · ACP-000009",
-              ].map((event) => (
-                <div className={styles.activityItem} key={event}>
-                  <span />
-                  <div>
-                    <strong>{event}</strong>
-                    <p>Demonstration event only</p>
-                  </div>
-                  <time>Example</time>
-                </div>
-              ))}
-            </div>
-          </Card>
-          <WatermarkSurface
-            position="bottom-right"
-            variant="lockup"
-            opacity={0.02}
-            className={styles.quietPanel}
-          >
-            <div className={styles.quietContent}>
-              <h2 className={styles.sectionTitle}>Quiet workspace</h2>
+        <section aria-labelledby="services-heading">
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2 id="services-heading">Services</h2>
               <p>
-                A full AccordPay lockup watermark is reserved for a future large
-                empty-dashboard region. It never sits behind values or actions.
+                Start with secure direct agreements today and preview what
+                AccordPay is building next.
               </p>
             </div>
-          </WatermarkSurface>
-        </Grid>
+            <Button href="/app/overview" variant="ghost">
+              Open Overview
+            </Button>
+          </div>
+          <div className={styles.serviceGrid}>
+            {services.map((service) => (
+              <Card
+                key={service.title}
+                variant={
+                  service.status === "Available" ? "elevated" : "standard"
+                }
+                className={styles.serviceCard}
+              >
+                <div className={styles.cardHeading}>
+                  <h3>{service.title}</h3>
+                  <Badge
+                    status={
+                      service.status === "Available" ? "funded" : "created"
+                    }
+                  >
+                    {service.status}
+                  </Badge>
+                </div>
+                <p>{service.description}</p>
+                {"actions" in service ? (
+                  <div className={styles.cardActions}>
+                    {service.actions.map((action, index) => (
+                      <Button
+                        key={action.href}
+                        href={action.href}
+                        variant={index === 0 ? "secondary" : "ghost"}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={styles.unavailable}>
+                    This service is not available yet.
+                  </p>
+                )}
+              </Card>
+            ))}
+          </div>
+        </section>
       </Stack>
     </Container>
   );

@@ -11,11 +11,20 @@
     "test:verification": "node --test src/services/verification/dojang-verification-service.test.mts",
     "test:names": "node --test src/services/names/upbit-name-resolution.test.mts src/components/web3/connected-wallet-identity.test.mts",
     "test:notifications": "node --test src/components/app-shell/notification-model.test.mts",
+    "test:wallet-reconnect": "node --test src/components/web3/wallet-reconnect.test.mts",
+    "test:live": "node --test src/features/live/live-escrow-model.test.mts src/services/activity/activity-utils.test.mts src/services/activity/activity-validation.test.mts src/services/activity/activity-index-model.test.mts src/components/app-shell/theme-model.test.mts",
+    "test:phase20": "node --test src/services/deal-room/deal-room.test.mts src/features/escrow/uri-validation.test.mts src/features/escrow/phase-19d.test.mts src/components/app-shell/relative-time.test.mts",
+    "test:phase20b": "node --test src/services/deal-room/phase20b.test.mts",
+    "test:wallet-auth": "node --test src/services/deal-room/wallet-auth.test.mts",
+    "test:phase21a": "node --test src/services/deal-room/phase21a.test.mts",
+    "test:phase21b": "node --test src/services/jobs/phase21b.test.mts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
     "@tanstack/react-query": "5.101.4",
     "next": "^16.2.12",
+    "pg": "^8.16.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "viem": "2.55.10",
@@ -24,6 +33,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.10.1",
+    "@types/pg": "^8.15.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint-config-next": "^16.2.12",

@@ -8,6 +8,10 @@ export const escrowStatuses = [
 
 export type EscrowStatus = (typeof escrowStatuses)[number];
 
+export function validateEscrowIdInput(value: string) {
+  return /^[1-9]\d*$/.test(value);
+}
+
 export function decodeEscrowStatus(value: number): EscrowStatus | undefined {
   return escrowStatuses[value];
 }

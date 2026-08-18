@@ -1,0 +1,103 @@
+.hero {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.hero h1,
+.hero p {
+  margin: 0;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(14rem, 2fr) repeat(3, minmax(9rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.toggle {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.jobCard {
+  display: grid;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.jobCard h2,
+.jobCard p {
+  margin: 0;
+}
+
+.cardTop,
+.meta,
+.skills,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.skills {
+  justify-content: flex-start;
+}
+
+.skill {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  background: var(--color-background);
+  font-size: var(--font-size-caption);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 0.7fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.detailContent,
+.sidebar,
+.postForm {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.postForm {
+  max-width: 48rem;
+}
+
+.description {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 64rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 40rem) {
+  .grid,
+  .filters,
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+}

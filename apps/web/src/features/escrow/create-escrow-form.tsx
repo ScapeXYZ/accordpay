@@ -22,13 +22,24 @@ import { isUpbitName } from "@/services/names";
 
 import { useEscrowTransaction } from "./use-escrow-transaction";
 import { prepareSellerAddress } from "./seller-resolution";
+import { validateEscrowUri } from "./uri-validation";
 import styles from "./escrow.module.css";
 
-export function CreateEscrowForm() {
+export function CreateEscrowForm({
+  initialSeller = "",
+  initialMetadataUri = "",
+  metadataLocked = false,
+  dealRoomId,
+}: {
+  initialSeller?: string;
+  initialMetadataUri?: string;
+  metadataLocked?: boolean;
+  dealRoomId?: string;
+} = {}) {
   const connection = useConnection();
   const publicClient = usePublicClient({ chainId: giwaSepolia.id });
-  const [seller, setSeller] = useState("");
-  const [metadataURI, setMetadataURI] = useState("");
+  const [seller, setSeller] = useState(initialSeller);
+  const [metadataURI, setMetadataURI] = useState(initialMetadataUri);
   const [deadline, setDeadline] = useState("");
   const [amount, setAmount] = useState("");
   const [formError, setFormError] = useState("");
@@ -40,6 +51,9 @@ export function CreateEscrowForm() {
       ? sellerName.result.address
       : undefined;
   const [confirmedSeller, setConfirmedSeller] = useState("");
+  const metadataValidation = metadataURI
+    ? validateEscrowUri(metadataURI)
+    : undefined;
 
   const retrieveEscrowId = useCallback(
     async (receipt: TransactionReceipt) => {
@@ -85,8 +99,18 @@ export function CreateEscrowForm() {
       }
 
       setCreatedEscrowId(escrowId);
+      if (dealRoomId) {
+        await fetch(`/api/deal-rooms/${dealRoomId}/escrow-link`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            escrowId: escrowId.toString(),
+            transactionHash: receipt.transactionHash,
+          }),
+        });
+      }
     },
-    [publicClient],
+    [dealRoomId, publicClient],
   );
   const transaction = useEscrowTransaction(retrieveEscrowId);
   const createdEscrowQuery = useReadContract({
@@ -133,8 +157,9 @@ export function CreateEscrowForm() {
       setFormError("Delivery deadline must be in the future.");
       return;
     }
-    if (!metadataURI || metadataURI.length > 2_048) {
-      setFormError("Metadata URI must contain 1–2,048 characters.");
+    const validatedMetadata = validateEscrowUri(metadataURI);
+    if (!validatedMetadata.valid) {
+      setFormError(validatedMetadata.error);
       return;
     }
     try {
@@ -157,7 +182,7 @@ export function CreateEscrowForm() {
       if (value <= BigInt(0)) throw new Error();
       await transaction.execute({
         functionName: "createEscrow",
-        args: [sellerForContract, deadlineSeconds, metadataURI],
+        args: [sellerForContract, deadlineSeconds, validatedMetadata.value],
         value,
       });
     } catch (error) {
@@ -200,6 +225,7 @@ export function CreateEscrowForm() {
                 setConfirmedSeller("");
               }}
               placeholder="0x… or username.up.id"
+              readOnly={Boolean(initialSeller)}
               required
             />
             {resolvedSeller ? (
@@ -257,13 +283,28 @@ export function CreateEscrowForm() {
           </div>
           <Input
             className={styles.fullSpan}
-            label="Metadata URI"
+            label="Agreement document"
             value={metadataURI}
             onChange={(event) => setMetadataURI(event.target.value)}
-            placeholder="ipfs://…"
-            helperText="Public content-addressed agreement reference. Never include private data."
+            placeholder="ipfs://bafy.../agreement.json"
+            helperText="A public IPFS, Arweave, or HTTPS link containing the agreement description, requirements, and terms."
+            error={
+              metadataValidation && !metadataValidation.valid
+                ? metadataValidation.error
+                : undefined
+            }
+            readOnly={metadataLocked}
             required
           />
+          <details className={`${styles.fullSpan} ${styles.uriHelp}`}>
+            <summary>What is agreement metadata?</summary>
+            <p>
+              Metadata describes the agreement and should point to a public
+              agreement document or JSON file. The on-chain escrow permanently
+              references this URI; it does not verify the linked contents. Do
+              not enter random text or confidential information.
+            </p>
+          </details>
           <Input
             label="Delivery deadline"
             type="datetime-local"
@@ -321,7 +362,7 @@ export function CreateEscrowForm() {
         </dl>
         <Button
           type="submit"
-          disabled={!connectedToGiwa}
+          disabled={!connectedToGiwa || metadataValidation?.valid !== true}
           loading={transaction.isPending}
           loadingText={
             transaction.transaction.phase === "submitted"

@@ -1,6 +1,7 @@
 import { Container, PageHeader, Stack } from "@/components/layout";
 import { NetworkIndicator, WalletPlaceholder } from "@/components/shared";
 import { Alert, Button, Select } from "@/components/ui";
+import { StepUpSecurity } from "@/components/deal-room";
 
 import styles from "../app-pages.module.css";
 
@@ -71,6 +72,9 @@ export default function SettingsPage() {
             <Button variant="secondary" disabled>
               Configure notifications
             </Button>
+          </section>
+          <section className={styles.settingsSection}>
+            <StepUpSecurity />
           </section>
         </div>
       </Stack>

@@ -5,6 +5,10 @@
   align-items: end;
 }
 
+.lookup > :last-child {
+  margin-bottom: var(--space-5);
+}
+
 .contractSummary {
   margin: 0 0 var(--space-4);
   color: var(--color-text-subtle);
@@ -75,6 +79,67 @@
 
 .uri {
   overflow-wrap: anywhere;
+}
+
+.uriWarning {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-error-700);
+  font-size: var(--font-size-caption);
+}
+
+.uriHelp {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+}
+
+.uriHelp summary {
+  color: var(--color-pine-700);
+  cursor: pointer;
+  font-weight: var(--font-weight-semibold);
+}
+
+.uriHelp p {
+  margin: var(--space-2) 0 0;
+}
+
+.advancedDetails {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-subtle);
+}
+
+.advancedDetails summary {
+  cursor: pointer;
+  color: var(--color-pine-700);
+  font-weight: var(--font-weight-semibold);
+}
+
+.advancedDetails dl {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+}
+
+.advancedDetails dt {
+  font-size: var(--font-size-caption);
+}
+
+.advancedDetails dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+}
+
+.actionGroup {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 32rem;
+}
+
+.actionMeta {
+  font-size: var(--font-size-sm);
 }
 
 .actionPanel,
@@ -157,7 +222,7 @@
   margin: 0;
   padding: var(--space-5);
   border-radius: var(--radius-lg);
-  color: var(--color-white);
+  color: var(--color-static-white);
   background: var(--color-pine-800);
 }
 
@@ -287,6 +352,11 @@
   .details,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .lookup > :last-child {
+    width: 100%;
+    margin-bottom: 0;
   }
 
   .fullSpan {

@@ -1,5 +1,6 @@
 export const applicationNavigation = [
-  { label: "Dashboard", href: "/app", shortLabel: "Home" },
+  { label: "Services", href: "/app", shortLabel: "Services" },
+  { label: "Overview", href: "/app/overview", shortLabel: "Overview" },
   { label: "Agreements", href: "/app/agreements", shortLabel: "Agreements" },
   { label: "Create Escrow", href: "/app/create", shortLabel: "Create" },
   {
@@ -13,7 +14,7 @@ export const applicationNavigation = [
 
 export const mobilePrimaryHrefs = [
   "/app",
+  "/app/overview",
   "/app/agreements",
-  "/app/create",
   "/app/activity",
 ] as const;

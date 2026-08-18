@@ -12,6 +12,7 @@ export function ConfirmationDialog({
   confirmLabel,
   cancelLabel = "Cancel",
   destructive = false,
+  disabled = false,
   onConfirm,
 }: {
   triggerLabel: string;
@@ -20,6 +21,7 @@ export function ConfirmationDialog({
   confirmLabel: string;
   cancelLabel?: string;
   destructive?: boolean;
+  disabled?: boolean;
   onConfirm?: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -39,6 +41,7 @@ export function ConfirmationDialog({
           destructive ? styles.destructive : styles.secondary
         }`}
         type="button"
+        disabled={disabled}
         onClick={() => dialogRef.current?.showModal()}
       >
         {triggerLabel}

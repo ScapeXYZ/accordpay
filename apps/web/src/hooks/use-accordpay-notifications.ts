@@ -1,29 +1,20 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getAddress } from "viem";
-import { useConnection, usePublicClient } from "wagmi";
 
 import {
   getUnreadCount,
   markAllNotificationsRead,
   notificationStorageKey,
-  notificationsFromContractLogs,
-  type AccordPayEventLog,
+  notificationsFromTransactions,
 } from "@/components/app-shell/notification-model";
-import { accordPayEscrowContract } from "@/config/contracts";
 import { giwaSepolia } from "@/config/web3";
+import { useLiveAccordPay } from "@/features/live";
 
 export function useAccordPayNotifications() {
-  const connection = useConnection();
-  const publicClient = usePublicClient({ chainId: giwaSepolia.id });
-  const address =
-    connection.status === "connected" && connection.address
-      ? getAddress(connection.address)
-      : undefined;
-  const storageKey = address
-    ? notificationStorageKey(giwaSepolia.id, address)
+  const activity = useLiveAccordPay();
+  const storageKey = activity.wallet
+    ? notificationStorageKey(giwaSepolia.id, activity.wallet)
     : undefined;
   const readSnapshot = useSyncExternalStore(
     (onStoreChange) => {
@@ -59,33 +50,10 @@ export function useAccordPayNotifications() {
       return new Set<string>();
     }
   }, [readSnapshot]);
-
-  const query = useQuery({
-    queryKey: [
-      "accordpay-notifications",
-      giwaSepolia.id,
-      address?.toLowerCase(),
-    ],
-    queryFn: async () => {
-      if (!publicClient || !address) return [];
-      const logs = await publicClient.getContractEvents({
-        address: accordPayEscrowContract.address,
-        abi: accordPayEscrowContract.abi,
-        fromBlock: BigInt(accordPayEscrowContract.deploymentBlock),
-        toBlock: "latest",
-        strict: true,
-      });
-      return notificationsFromContractLogs(
-        logs as AccordPayEventLog[],
-        address,
-      );
-    },
-    enabled: Boolean(publicClient && address),
-    retry: 1,
-    staleTime: 15_000,
-  });
-
-  const notifications = useMemo(() => query.data ?? [], [query.data]);
+  const notifications = useMemo(
+    () => notificationsFromTransactions(activity.transactions),
+    [activity.transactions],
+  );
   const unreadCount = useMemo(
     () => getUnreadCount(notifications, readIds),
     [notifications, readIds],
@@ -99,12 +67,16 @@ export function useAccordPayNotifications() {
   }
 
   return {
-    connected: Boolean(address),
+    connected: activity.connected,
     notifications,
     unreadCount,
-    isLoading: query.isFetching,
-    error: query.error,
+    isLoading: activity.isLoading,
+    error: activity.error,
+    partial: activity.partial,
+    progress: activity.progress,
+    warnings: activity.warnings,
+    syncing: activity.syncing || !activity.syncComplete,
     markAllRead,
-    refresh: query.refetch,
+    refresh: activity.refresh,
   };
 }

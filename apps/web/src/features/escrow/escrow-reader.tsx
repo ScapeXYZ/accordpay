@@ -14,6 +14,7 @@ import {
   Card,
   ConfirmationDialog,
   Input,
+  Textarea,
 } from "@/components/ui";
 import { accordPayEscrowContract } from "@/config/contracts";
 import { giwaSepolia } from "@/config/web3";
@@ -24,8 +25,11 @@ import {
   buildMarkDeliveredRequest,
   decodeEscrowStatus,
   escrowActionFunctions,
+  validateEscrowIdInput,
 } from "./escrow-lifecycle";
 import styles from "./escrow.module.css";
+import { validateEscrowUri } from "./uri-validation";
+import { DeliveryProofBuilder } from "./delivery-proof-builder";
 
 export type EscrowRecord = {
   id: bigint;
@@ -64,12 +68,15 @@ export function EscrowReader({
 }) {
   const validInitialId =
     initialId && /^[1-9]\d*$/.test(initialId) ? initialId : undefined;
-  const [inputId, setInputId] = useState(validInitialId ?? "1");
+  const [inputId, setInputId] = useState(validInitialId ?? "");
   const [escrowId, setEscrowId] = useState<bigint | undefined>(
     validInitialId ? BigInt(validInitialId) : undefined,
   );
   const [deliveryURI, setDeliveryURI] = useState("");
   const [buyerShare, setBuyerShare] = useState("5000");
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeEvidence, setDisputeEvidence] = useState("");
+  const [disputeError, setDisputeError] = useState("");
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const connection = useConnection();
 
@@ -119,6 +126,64 @@ export function EscrowReader({
     (isSeller && (status === "funded" || status === "delivered")) ||
     (isBuyer && (status === "delivered" || status === "funded")) ||
     (isResolver && status === "disputed");
+  const inputIdValid = validateEscrowIdInput(inputId);
+  const inputIdError =
+    inputId.length > 0 && !inputIdValid
+      ? "Enter a positive whole-number escrow ID."
+      : undefined;
+  const deliveryValidation = deliveryURI
+    ? validateEscrowUri(deliveryURI)
+    : undefined;
+  const storedMetadata = escrow
+    ? validateEscrowUri(escrow.metadataURI)
+    : undefined;
+  const storedEvidence = escrow
+    ? validateEscrowUri(escrow.deliveryURI)
+    : undefined;
+  const disputeEvidenceValidation = disputeEvidence
+    ? validateEscrowUri(disputeEvidence)
+    : undefined;
+
+  async function createCaseAndRaiseDispute() {
+    if (!escrow || disputeReason.trim().length < 10) return;
+    setDisputeError("");
+    const response = await fetch("/api/disputes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        escrowId: escrow.id.toString(),
+        reason: disputeReason.trim(),
+        evidenceUri: disputeEvidenceValidation?.valid
+          ? disputeEvidenceValidation.value
+          : "",
+      }),
+    });
+    const created = (await response.json()) as {
+      disputeCaseId?: string;
+      error?: { message: string };
+    };
+    if (!response.ok || !created.disputeCaseId) {
+      setDisputeError(
+        created.error?.message ??
+          "Authenticate the connected wallet before creating a dispute case.",
+      );
+      return;
+    }
+    const receipt = await action.execute({
+      functionName: escrowActionFunctions.raiseDispute,
+      args: [escrow.id],
+    });
+    if (receipt?.status === "success") {
+      await fetch(`/api/disputes/${created.disputeCaseId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          transactionHash: receipt.transactionHash,
+          blockNumber: receipt.blockNumber.toString(),
+        }),
+      });
+    }
+  }
 
   function submitLookup(event: React.FormEvent) {
     event.preventDefault();
@@ -141,16 +206,22 @@ export function EscrowReader({
         )}
         <form className={styles.lookup} onSubmit={submitLookup}>
           <Input
-            label="Escrow ID"
+            label="Agreement ID"
             type="number"
             min="1"
             step="1"
             value={inputId}
-            onChange={(event) => setInputId(event.target.value)}
+            onChange={(event) => setInputId(event.target.value.trim())}
+            placeholder="Enter escrow ID"
             helperText="Enter the numeric on-chain escrow ID."
+            error={inputIdError}
             required
           />
-          <Button type="submit" loading={escrowQuery.isFetching}>
+          <Button
+            type="submit"
+            disabled={!inputIdValid}
+            loading={escrowQuery.isFetching}
+          >
             Read from GIWA
           </Button>
         </form>
@@ -243,13 +314,47 @@ export function EscrowReader({
                 <dd>{formatTimestamp(escrow.completedAt)}</dd>
               </div>
               <div className={styles.fullDetail}>
-                <dt>Metadata URI</dt>
-                <dd className={styles.uri}>{escrow.metadataURI}</dd>
+                <dt>Agreement document</dt>
+                <dd className={styles.uri}>
+                  {storedMetadata?.valid ? (
+                    <a
+                      href={storedMetadata.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {storedMetadata.value}
+                    </a>
+                  ) : (
+                    <>
+                      {escrow.metadataURI}
+                      <span className={styles.uriWarning}>
+                        Invalid or unsupported metadata URI
+                      </span>
+                    </>
+                  )}
+                </dd>
               </div>
               <div className={styles.fullDetail}>
-                <dt>Delivery evidence URI</dt>
+                <dt>Delivery proof</dt>
                 <dd className={styles.uri}>
-                  {escrow.deliveryURI || "Not submitted"}
+                  {!escrow.deliveryURI ? (
+                    "Not submitted"
+                  ) : storedEvidence?.valid ? (
+                    <a
+                      href={storedEvidence.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {storedEvidence.value}
+                    </a>
+                  ) : (
+                    <>
+                      {escrow.deliveryURI}
+                      <span className={styles.uriWarning}>
+                        Invalid or unsupported evidence URI
+                      </span>
+                    </>
+                  )}
                 </dd>
               </div>
               <div className={styles.fullDetail}>
@@ -265,6 +370,27 @@ export function EscrowReader({
                 </dd>
               </div>
             </dl>
+            <details className={styles.advancedDetails}>
+              <summary>Advanced blockchain details</summary>
+              <dl>
+                <div>
+                  <dt>Numeric on-chain escrow ID</dt>
+                  <dd>{escrow.id.toString()}</dd>
+                </div>
+                <div>
+                  <dt>Raw agreement URI</dt>
+                  <dd>{escrow.metadataURI}</dd>
+                </div>
+                <div>
+                  <dt>Raw delivery URI</dt>
+                  <dd>{escrow.deliveryURI || "Not submitted"}</dd>
+                </div>
+                <div>
+                  <dt>Contract address</dt>
+                  <dd>{accordPayEscrowContract.address}</dd>
+                </div>
+              </dl>
+            </details>
 
             {!readOnly && (
               <>
@@ -294,45 +420,73 @@ export function EscrowReader({
                     <div className={styles.actions}>
                       {isSeller && status === "funded" && (
                         <>
+                          <DeliveryProofBuilder
+                            escrowId={escrow.id}
+                            onReady={setDeliveryURI}
+                          />
                           <Input
-                            label="Delivery evidence URI"
+                            label="Delivery proof URI"
                             value={deliveryURI}
                             onChange={(event) =>
                               setDeliveryURI(event.target.value)
                             }
-                            placeholder="ipfs://…"
-                            helperText="Public reference only. Do not publish confidential evidence."
+                            placeholder="ipfs://bafy.../delivery-proof.pdf"
+                            helperText="Generated automatically after upload. Advanced users may paste a public IPFS, Arweave, or HTTPS link."
+                            error={
+                              deliveryValidation && !deliveryValidation.valid
+                                ? deliveryValidation.error
+                                : undefined
+                            }
                             required
                           />
-                          <Button
-                            disabled={!deliveryURI || action.isPending}
-                            loading={action.isPending}
-                            onClick={() =>
-                              action.execute(
-                                buildMarkDeliveredRequest(
-                                  escrow.id,
-                                  deliveryURI,
-                                ),
-                              )
-                            }
-                          >
-                            Mark delivered
-                          </Button>
+                          <p className={styles.actionMeta}>
+                            Delivery evidence can be a completed file,
+                            deployment, source-code release, receipt, report,
+                            image, or other publicly accessible proof of
+                            delivery.
+                          </p>
+                          {deliveryValidation?.valid ? (
+                            <ConfirmationDialog
+                              triggerLabel="Mark delivered"
+                              title="Mark this escrow delivered?"
+                              description={`State: Funded. Role: Seller. This records ${deliveryValidation.value} and moves the escrow to Delivered. No funds move. The action cannot be reversed, but the seller may still refund and either party may dispute.`}
+                              confirmLabel="Mark delivered on GIWA"
+                              disabled={action.isPending}
+                              onConfirm={() =>
+                                action.execute(
+                                  buildMarkDeliveredRequest(
+                                    escrow.id,
+                                    deliveryValidation.value,
+                                  ),
+                                )
+                              }
+                            />
+                          ) : (
+                            <Button disabled>Mark delivered</Button>
+                          )}
                         </>
                       )}
                       {isBuyer && status === "delivered" && (
-                        <Button
-                          disabled={action.isPending}
-                          loading={action.isPending}
-                          onClick={() =>
-                            action.execute({
-                              functionName: escrowActionFunctions.releaseFunds,
-                              args: [escrow.id],
-                            })
-                          }
-                        >
-                          Release funds
-                        </Button>
+                        <div className={styles.actionGroup}>
+                          <ConfirmationDialog
+                            triggerLabel="Release funds"
+                            title="Release the full escrow payment?"
+                            description={`State: Delivered. Role: Buyer. This immediately transfers ${formatEther(escrow.amount)} Test ETH to the seller and permanently completes the escrow. It cannot be reversed.${storedEvidence?.valid ? ` Delivery evidence: ${storedEvidence.value}` : ""}`}
+                            confirmLabel="Release funds"
+                            disabled={action.isPending}
+                            onConfirm={() =>
+                              action.execute({
+                                functionName:
+                                  escrowActionFunctions.releaseFunds,
+                                args: [escrow.id],
+                              })
+                            }
+                          />
+                          <p>
+                            Immediately pays the seller and permanently
+                            completes this escrow.
+                          </p>
+                        </div>
                       )}
                       {isSeller &&
                         (status === "funded" || status === "delivered") && (
@@ -348,11 +502,12 @@ export function EscrowReader({
                               </Button>
                             ) : (
                               <ConfirmationDialog
-                                triggerLabel="Approve refund"
-                                title="Refund this escrow?"
-                                description={`This is a separate, irreversible transaction. It will move escrow ${escrow.id.toString()} to Refunded and return the full deposit to the buyer.`}
-                                confirmLabel="Approve full refund"
+                                triggerLabel="Refund buyer now"
+                                title="Immediately refund the buyer?"
+                                description={`Agreement ACP-${escrow.id.toString().padStart(6, "0")}. Buyer: ${escrow.buyer}. Seller: ${escrow.seller}. Amount: ${formatEther(escrow.amount)} Test ETH. Current state: ${status}. Connected role: Seller. The full amount moves immediately to the buyer, the escrow becomes Refunded, and this cannot be reversed.`}
+                                confirmLabel="Refund buyer now"
                                 destructive
+                                disabled={action.isPending}
                                 onConfirm={() =>
                                   action.execute(
                                     buildApproveRefundRequest(escrow.id),
@@ -360,40 +515,84 @@ export function EscrowReader({
                                 }
                               />
                             )}
+                            <p className={styles.actionMeta}>
+                              Immediately returns the full escrow amount to the
+                              buyer. This action is irreversible.
+                            </p>
                           </>
                         )}
                       {(isBuyer || isSeller) &&
                         (status === "funded" || status === "delivered") && (
-                          <Button
-                            variant="destructive"
-                            disabled={action.isPending}
-                            loading={action.isPending}
-                            onClick={() =>
+                          <div className={styles.actionGroup}>
+                            <Textarea
+                              label="Dispute reason"
+                              helperText="Stored off-chain in the private dispute case; the contract records only the Disputed state."
+                              value={disputeReason}
+                              onChange={(event) =>
+                                setDisputeReason(event.target.value)
+                              }
+                              maxLength={4000}
+                              required
+                            />
+                            <Input
+                              label="Supporting evidence"
+                              helperText="Optional public HTTPS, IPFS, or Arweave URI."
+                              value={disputeEvidence}
+                              onChange={(event) =>
+                                setDisputeEvidence(event.target.value)
+                              }
+                              error={
+                                disputeEvidenceValidation &&
+                                !disputeEvidenceValidation.valid
+                                  ? disputeEvidenceValidation.error
+                                  : undefined
+                              }
+                            />
+                            <ConfirmationDialog
+                              triggerLabel="Raise dispute"
+                              title="Freeze this escrow in dispute?"
+                              description={`Agreement ACP-${escrow.id.toString().padStart(6, "0")}. Buyer: ${escrow.buyer}. Seller: ${escrow.seller}. Amount: ${formatEther(escrow.amount)} Test ETH. Current state: ${status}. Connected role: ${isBuyer ? "Buyer" : "Seller"}. Funds do not move immediately. The escrow becomes Disputed; normal release, refund, and deadline reclaim stop. Only the configured designated testnet resolver can finalize the payout. Buyer and seller cannot withdraw the dispute. This is designated resolver resolution, not decentralized arbitration.${storedEvidence?.valid ? ` Delivery proof: ${storedEvidence.value}` : ""}`}
+                              confirmLabel="Raise dispute"
+                              destructive
+                              disabled={
+                                action.isPending ||
+                                disputeReason.trim().length < 10 ||
+                                (Boolean(disputeEvidence) &&
+                                  disputeEvidenceValidation?.valid !== true)
+                              }
+                              onConfirm={() => void createCaseAndRaiseDispute()}
+                            />
+                            {disputeError ? (
+                              <p role="alert">{disputeError}</p>
+                            ) : null}
+                            <p>
+                              Freezes the escrow without moving funds. Only the
+                              designated AccordPay testnet resolver can later
+                              distribute the funds.
+                            </p>
+                          </div>
+                        )}
+                      {isBuyer && status === "funded" && (
+                        <div className={styles.actionGroup}>
+                          <ConfirmationDialog
+                            triggerLabel="Reclaim after deadline"
+                            title="Reclaim the escrow deposit?"
+                            description={`State: Funded. Role: Buyer. The deadline has passed without delivery. This immediately returns ${formatEther(escrow.amount)} Test ETH to the buyer and permanently moves the escrow to Refunded.`}
+                            confirmLabel="Reclaim deposit"
+                            disabled={!canReclaim || action.isPending}
+                            onConfirm={() =>
                               action.execute({
                                 functionName:
-                                  escrowActionFunctions.raiseDispute,
+                                  escrowActionFunctions.reclaimAfterDeadline,
                                 args: [escrow.id],
                               })
                             }
-                          >
-                            Raise dispute
-                          </Button>
-                        )}
-                      {isBuyer && status === "funded" && (
-                        <Button
-                          variant="secondary"
-                          disabled={!canReclaim || action.isPending}
-                          loading={action.isPending}
-                          onClick={() =>
-                            action.execute({
-                              functionName:
-                                escrowActionFunctions.reclaimAfterDeadline,
-                              args: [escrow.id],
-                            })
-                          }
-                        >
-                          Reclaim after deadline
-                        </Button>
+                          />
+                          <p>
+                            Available only after the deadline while delivery has
+                            not been marked.
+                          </p>
+                        </div>
                       )}
                       {isBuyer && status === "funded" && !afterDeadline && (
                         <p className={styles.actionReason}>
@@ -415,23 +614,40 @@ export function EscrowReader({
                             }
                             helperText="0 sends all funds to the seller; 10,000 sends all funds to the buyer."
                           />
-                          <Button
+                          {/^\d+$/.test(buyerShare) &&
+                          Number(buyerShare) <= 10_000 ? (
+                            <p className={styles.actionReason}>
+                              Buyer:{" "}
+                              {formatEther(
+                                (escrow.amount * BigInt(buyerShare)) / 10_000n,
+                              )}{" "}
+                              Test ETH · Seller:{" "}
+                              {formatEther(
+                                escrow.amount -
+                                  (escrow.amount * BigInt(buyerShare)) /
+                                    10_000n,
+                              )}{" "}
+                              Test ETH
+                            </p>
+                          ) : null}
+                          <ConfirmationDialog
+                            triggerLabel="Resolve dispute"
+                            title="Finalize the dispute payout?"
+                            description={`State: Disputed. Role: Resolver. This immediately pays ${Number(buyerShare) / 100}% to the buyer and the remainder to the seller, then permanently completes the escrow.`}
+                            confirmLabel="Resolve and distribute funds"
                             disabled={
                               action.isPending ||
                               !/^\d+$/.test(buyerShare) ||
                               Number(buyerShare) > 10_000
                             }
-                            loading={action.isPending}
-                            onClick={() =>
+                            onConfirm={() =>
                               action.execute({
                                 functionName:
                                   escrowActionFunctions.resolveDispute,
                                 args: [escrow.id, Number(buyerShare)],
                               })
                             }
-                          >
-                            Resolve dispute
-                          </Button>
+                          />
                         </>
                       )}
                     </div>

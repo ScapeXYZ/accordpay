@@ -6,12 +6,15 @@ import { usePathname } from "next/navigation";
 
 import { WalletControl } from "../web3";
 import { Badge } from "../ui";
-import { AvatarPlaceholder } from "./avatar-placeholder";
 import { NotificationPanel } from "./notification-panel";
+import { ThemeToggle } from "./theme-toggle";
 import styles from "./app-shell.module.css";
 
 const titles: Record<string, string> = {
-  "/app": "Dashboard",
+  "/app": "Services",
+  "/app/overview": "Overview",
+  "/app/jobs": "Browse jobs",
+  "/app/jobs/post": "Post a job",
   "/app/agreements": "Agreements",
   "/app/create": "Create Escrow",
   "/app/transactions": "Transactions",
@@ -27,7 +30,9 @@ export function AppHeader({
   onMenuToggle: () => void;
 }) {
   const pathname = usePathname();
-  const title = titles[pathname] ?? "AccordPay";
+  const title =
+    titles[pathname] ??
+    (pathname.startsWith("/app/jobs/") ? "Job details" : "AccordPay");
 
   return (
     <header className={styles.header}>
@@ -54,7 +59,7 @@ export function AppHeader({
       </button>
       <div className={styles.headerContext}>
         <nav aria-label="Breadcrumb">
-          <Link href="/app">Application</Link>
+          <Link href="/app">Service Hub</Link>
           <span aria-hidden="true">/</span>
           <span aria-current="page">{title}</span>
         </nav>
@@ -63,7 +68,7 @@ export function AppHeader({
         <Badge status="testnet">GIWA Sepolia</Badge>
         <NotificationPanel />
         <WalletControl compact />
-        <AvatarPlaceholder />
+        <ThemeToggle />
       </div>
     </header>
   );

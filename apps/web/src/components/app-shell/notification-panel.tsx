@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 
 import { Button, Spinner } from "@/components/ui";
 import { giwaSepolia } from "@/config/web3";
 import { useAccordPayNotifications } from "@/hooks/use-accordpay-notifications";
 
 import { notificationPanelReducer } from "./notification-model";
+import { formatFullTimestamp, formatRelativeTime } from "./relative-time";
 import styles from "./app-shell.module.css";
 
 export function NotificationPanel() {
@@ -17,6 +18,12 @@ export function NotificationPanel() {
     open: false,
   });
   const feed = useAccordPayNotifications();
+  const [clock, setClock] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 15_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   function openPanel() {
     dispatch({ type: "open" });
@@ -95,19 +102,29 @@ export function NotificationPanel() {
               Mark all as read
             </button>
           </div>
+          {feed.syncing && feed.connected ? (
+            <p className={styles.notificationPartial} role="status">
+              Updating GIWA activity in the background
+              {feed.progress
+                ? ` — ${feed.progress.completedRanges} of ${feed.progress.totalRanges} ranges synchronized.`
+                : "."}
+            </p>
+          ) : null}
 
           {feed.isLoading ? (
             <div className={styles.notificationState} aria-live="polite">
               <Spinner size="medium" label="Loading contract notifications" />
-              <p>Reading confirmed events from GIWA Sepolia.</p>
+              <p>
+                Loading confirmed activity
+                {feed.progress
+                  ? `… ${feed.progress.completedRanges} of ${feed.progress.totalRanges} ranges`
+                  : "…"}
+              </p>
             </div>
           ) : feed.error ? (
             <div className={styles.notificationState} role="alert">
               <strong>Notifications unavailable</strong>
-              <p>
-                GIWA Sepolia events could not be read. No notification data was
-                fabricated.
-              </p>
+              <p>{feed.error.message}</p>
               <Button variant="secondary" onClick={() => feed.refresh()}>
                 Retry
               </Button>
@@ -122,39 +139,45 @@ export function NotificationPanel() {
             </div>
           ) : feed.notifications.length === 0 ? (
             <div className={styles.notificationState}>
-              <strong>No notifications yet</strong>
-              <p>
-                No confirmed AccordPay contract events were found for this
-                wallet.
-              </p>
+              <strong>No AccordPay notifications yet</strong>
+              <p>No confirmed lifecycle events were found for this wallet.</p>
             </div>
           ) : (
-            <ol className={styles.notificationList}>
-              {feed.notifications.map((notification) => (
-                <li key={notification.id}>
-                  <div className={styles.notificationItemHeading}>
-                    <strong>{notification.title}</strong>
-                    <span>Block {notification.blockNumber.toString()}</span>
-                  </div>
-                  <p>{notification.description}</p>
-                  <div className={styles.notificationLinks}>
-                    <Link
-                      href={`/app/agreements?id=${notification.escrowId.toString()}`}
-                      onClick={closePanel}
-                    >
-                      Open agreement
-                    </Link>
-                    <a
-                      href={`${giwaSepolia.blockExplorers.default.url}/tx/${notification.transactionHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      GIWA Explorer
-                    </a>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <>
+              {feed.partial ? (
+                <p className={styles.notificationPartial} role="status">
+                  Some optional event details are temporarily unavailable.
+                </p>
+              ) : null}
+              <ol className={styles.notificationList}>
+                {feed.notifications.map((notification) => (
+                  <li key={notification.id}>
+                    <div className={styles.notificationItemHeading}>
+                      <strong>{notification.title}</strong>
+                      <span title={formatFullTimestamp(notification.timestamp)}>
+                        {formatRelativeTime(notification.timestamp, clock)}
+                      </span>
+                    </div>
+                    <p>{notification.description}</p>
+                    <div className={styles.notificationLinks}>
+                      <Link
+                        href={`/app/agreements?id=${notification.escrowId.toString()}`}
+                        onClick={closePanel}
+                      >
+                        Open agreement
+                      </Link>
+                      <a
+                        href={`${giwaSepolia.blockExplorers.default.url}/tx/${notification.transactionHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        GIWA Explorer
+                      </a>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </>
           )}
         </div>
       </dialog>
