@@ -2,6 +2,8 @@ import { JobDetail } from "@/components/jobs/job-detail";
 import { Container, Stack } from "@/components/layout";
 import { Button } from "@/components/ui";
 
+import styles from "../../app-pages.module.css";
+
 export default async function JobDetailPage({
   params,
 }: {
@@ -11,7 +13,11 @@ export default async function JobDetailPage({
   return (
     <Container size="wide">
       <Stack gap={5}>
-        <Button href="/app/jobs" variant="ghost">
+        <Button
+          className={styles.backLink}
+          href="/app/jobs"
+          variant="ghost"
+        >
           ← Back to jobs
         </Button>
         <JobDetail jobId={jobId} />

@@ -243,16 +243,6 @@ export function WalletControl({ compact = false }: { compact?: boolean }) {
             <small>{connectedIdentity.secondary}</small>
           ) : null}
         </span>
-        <button
-          className={styles.identityRefresh}
-          type="button"
-          onClick={() =>
-            void upbitName.refresh().then(() => upbitName.refetch())
-          }
-          disabled={upbitName.state === "resolving"}
-        >
-          Refresh identity
-        </button>
         <Button variant="ghost" onClick={disconnectExplicitly}>
           Disconnect
         </Button>

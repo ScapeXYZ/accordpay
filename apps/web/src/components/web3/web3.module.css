@@ -60,22 +60,6 @@
   background: var(--color-success-700);
 }
 
-.identityRefresh {
-  padding: var(--space-1);
-  border: 0;
-  color: var(--color-pine-700);
-  background: transparent;
-  font: inherit;
-  font-size: 0.6875rem;
-  cursor: pointer;
-}
-
-.identityRefresh:focus-visible {
-  border-radius: var(--radius-sm);
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
 .walletDialog {
   width: min(calc(100% - 2rem), 30rem);
   max-height: min(80vh, 42rem);
@@ -238,8 +222,7 @@
 }
 
 @media (max-width: 48rem) {
-  .connectedIdentity,
-  .identityRefresh {
+  .connectedIdentity {
     display: none;
   }
 }
